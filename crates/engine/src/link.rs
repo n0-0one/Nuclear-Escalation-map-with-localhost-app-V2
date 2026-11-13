@@ -45,6 +45,11 @@ impl Link {
         Some(body)
     }
 
+    /// One page as text, unparsed (used by the battle recorder).
+    pub fn raw(&self, path: &str) -> Option<String> {
+        self.get(path)
+    }
+
     /// Raw bytes of the game's own map picture, for maps the app has no art for.
     pub fn map_image(&self) -> Option<Vec<u8>> {
         let response = self.agent.get(&format!("{}/map.img", self.base)).call().ok()?;

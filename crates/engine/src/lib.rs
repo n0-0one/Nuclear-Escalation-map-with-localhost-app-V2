@@ -7,6 +7,8 @@
 pub mod convoy;
 pub mod engine;
 pub mod geo;
+#[cfg(feature = "link")]
+pub mod host;
 pub mod ident;
 #[cfg(feature = "link")]
 pub mod link;
