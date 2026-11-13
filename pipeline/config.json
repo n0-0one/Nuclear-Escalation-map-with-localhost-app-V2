@@ -1,0 +1,41 @@
+{
+  "mission_dir": "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation",
+  "mission_suffix": "_nuclear_escalation_tdm.blkx",
+  "event_min_br": 8.7,
+  "event_min_br_note": "Matchmaking floor announced for the event. It is not stored in the client files, so it is configured here.",
+  "level_names": {
+    "air_archipelago": "Archipelago",
+    "air_south_eastern_city": "South Eastern City",
+    "air_kamchatka": "Kamchatka (Volcano Valley)"
+  },
+  "terrain_source": {
+    "repository": "majorlier/nuclear-thunder-interactive-map",
+    "note": "Terrain height, roads and navigation meshes are extracted from the compiled game level by the upstream map project. They are not part of the datamine."
+  },
+  "level_assets": {
+    "air_archipelago": {
+      "image": "map_4k.png",
+      "height_meta": "terrain_meta.json",
+      "height": "terrain_height_16bit.webp",
+      "roads": "road_network.json",
+      "navmesh": null
+    },
+    "air_south_eastern_city": {
+      "image": "air_south_eastern_city_map.png",
+      "height_meta": "generated/southeastern_city_heightmap/southeastern_city_height_meta.json",
+      "height": "generated/southeastern_city_heightmap/southeastern_city_height_16bit.webp",
+      "roads": "road_network_city.json",
+      "navmesh": "navmesh_city.json"
+    },
+    "air_kamchatka": {
+      "image": "air_kamchatka_map.png",
+      "height_meta": "generated/kamchatka_heightmap/kamchatka_height_meta.json",
+      "height": "generated/kamchatka_heightmap/kamchatka_height_16bit.webp",
+      "roads": "road_network_kamchatka.json",
+      "navmesh": null
+    }
+  },
+  "nuclear_weapon_name_hints": ["_nt", "b61", "b28", "b43", "b57", "b83", "rn_", "nuclear", "an_52", "we177", "tn_"],
+  "image": { "size": 4096, "quality": 80 },
+  "terrain": { "max_size": 2048 }
+}

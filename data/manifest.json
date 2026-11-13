@@ -1,0 +1,369 @@
+{
+ "schema": 1,
+ "game_version": "2.61.0.17",
+ "datamine": {
+  "repository": "gszabi99/War-Thunder-Datamine",
+  "commit": "ecbd610ff9aa0248bee3095db0cf28bde9ea5aee"
+ },
+ "terrain_source": {
+  "repository": "majorlier/nuclear-thunder-interactive-map",
+  "commit": "b785602"
+ },
+ "files": {
+  "core.json": {
+   "sha256": "0f907c054397d91433637c4ac32fa8d46ec17081e1a6e6cb90a47b9206fe67d5",
+   "bytes": 243264
+  },
+  "levels/archipelago.height.json": {
+   "sha256": "d8625879a490666c018ba6c9c8146cf2389754b3f2a40de012836a2ec797f20a",
+   "bytes": 59
+  },
+  "levels/archipelago.height.webp": {
+   "sha256": "f0c7d7dcdfaf2bc45bf201a19e8ff3e774c3a74930ee0d8469e4b32c0e4e2e55",
+   "bytes": 2804658
+  },
+  "levels/archipelago.json": {
+   "sha256": "132fd126090ad58255c16f44d4dc8b4982955b5b22374058f2c3907b61bbcf86",
+   "bytes": 277729
+  },
+  "levels/archipelago.roads.json": {
+   "sha256": "1b69af7fec8baa0a5c92fba54c38061dea31027112be767b2762750402f2c9ad",
+   "bytes": 354112
+  },
+  "levels/archipelago.webp": {
+   "sha256": "fae42367cfb50277596dedcac3d45c71ec68bf7cd500e0cbd86897029b51fc7c",
+   "bytes": 1543310
+  },
+  "levels/kamchatka.height.json": {
+   "sha256": "97515dfbc16f02b89fd0e2b52b4e1c268d7e438e74d71b28dd826bec2dda55c8",
+   "bytes": 60
+  },
+  "levels/kamchatka.height.webp": {
+   "sha256": "a2820024d16b2dda353b88d42e7006f6d8b2ad16be288cd33276e814223f5ee4",
+   "bytes": 3237768
+  },
+  "levels/kamchatka.json": {
+   "sha256": "1e7f33bac2ab955597ee3649e354e62214e8cea4ac19fc35cd6a35ad35b07d8a",
+   "bytes": 262640
+  },
+  "levels/kamchatka.roads.json": {
+   "sha256": "cbc293f783833dae6a96371d021e1ba9aab5e8b0a76fd0ef25f87687b50626fb",
+   "bytes": 264097
+  },
+  "levels/kamchatka.webp": {
+   "sha256": "4e7b4add9b7219a5702b45eda6c2ff8d38ffb1e922fd7d69ffc78c81fd9bfdd2",
+   "bytes": 1557450
+  },
+  "levels/south_eastern_city.height.json": {
+   "sha256": "97cd57a9e45dfc1dc80581e5a1da4f11e105c8234328730887844f8ddd6949f8",
+   "bytes": 59
+  },
+  "levels/south_eastern_city.height.webp": {
+   "sha256": "4906397ea7ed5c8069b45688faec816f716f0e998f7f664d389f58e7899c57a9",
+   "bytes": 1144582
+  },
+  "levels/south_eastern_city.json": {
+   "sha256": "eda833f744d346e1ed1cad771198c3cf8a67848302c7ab8b1a96539fb09c597a",
+   "bytes": 251675
+  },
+  "levels/south_eastern_city.roads.json": {
+   "sha256": "e7317e66d929d46f539a12469dece0f297e89f898579b5a536d28ee0a336f94b",
+   "bytes": 157249
+  },
+  "levels/south_eastern_city.webp": {
+   "sha256": "2949a71e80ced291bb5e8064e77aa7834fa8c9dd5abff4ee6272fadfbab05139",
+   "bytes": 356562
+  },
+  "units/2s19m1.webp": {
+   "sha256": "1456826ec396fd2f1dee528212e89c13d4d1f8383560c7380f140da4639563c2",
+   "bytes": 10744
+  },
+  "units/2s38.webp": {
+   "sha256": "6dac2b23792602ded2b703706c5858b5725a37d2afcd1d4f25d88df054ee8fec",
+   "bytes": 10678
+  },
+  "units/2s3m.webp": {
+   "sha256": "3419ba12113baa09dbe653c85bd5e59cc47bca4f8d70b53c9f6e041a3fed2a7d",
+   "bytes": 11190
+  },
+  "units/2s6.webp": {
+   "sha256": "c8687ee97358e3ec4e09ce7715995beffae98beae2beae533ea1d2a07a2a89aa",
+   "bytes": 8434
+  },
+  "units/9a317m.webp": {
+   "sha256": "5e48c9a9d20b50dd4e31a67ad624fbf68b78d579df72c6a070650a07887eb652",
+   "bytes": 8886
+  },
+  "units/9a33bm3.webp": {
+   "sha256": "1879973cf7abe6f7c0a116aab52ed26942296919e2c3960febd66d997d3d3489",
+   "bytes": 11820
+  },
+  "units/9a35m2.webp": {
+   "sha256": "271131f0c352b04bbf4c966b61421c1454747d0e5d20bdab113afe7c773c3e12",
+   "bytes": 10178
+  },
+  "units/9k79_tochka.webp": {
+   "sha256": "40c35dc24b932c0bcf43895ec2d3d5563ef08eae48937c0f6a513a392d874780",
+   "bytes": 6492
+  },
+  "units/9s18_m3.webp": {
+   "sha256": "21f4a7481815648efccbcab9093f702cbdd7dcdba5116875d7f80f3d53a7bd41",
+   "bytes": 8864
+  },
+  "units/aircraftcarrier_admiral_kuznetsov.webp": {
+   "sha256": "51366993100f59e44fa96df40b0d26b7acd70e4a7de334c82f066afb50292bb6",
+   "bytes": 7822
+  },
+  "units/aircraftcarrier_baku.webp": {
+   "sha256": "ac4be6c59e5dd5b8f049d9b71ed8d1f5223e143dbf20e9d2698552e74a472d35",
+   "bytes": 8124
+  },
+  "units/aircraftcarrier_forrestal.webp": {
+   "sha256": "29f261a7c582f748560707539f867ee0a2eb784932ea9d67690c55a0dc044c28",
+   "bytes": 7460
+  },
+  "units/ashville_class_douglas.webp": {
+   "sha256": "340b2c3db16963aa9f3f1cb0e5f526d2df7cf5bc2c4c82549bd3421fffdf9212",
+   "bytes": 14598
+  },
+  "units/bmp_1.webp": {
+   "sha256": "ccdbf2af1ed1c262cb4f599a8cfa897158dcc92c425cdc98c853f07e4c06b7a8",
+   "bytes": 10220
+  },
+  "units/bmp_2.webp": {
+   "sha256": "a3d40e91c662fe65e4dfb5b3296100a55a0a85ade9f7fb6bc9b631a49b68c830",
+   "bytes": 11198
+  },
+  "units/bmp_3.webp": {
+   "sha256": "0d5c9c9a9a0d1285c8633b6e39871d3236672ad99144babab855f59c6e44cb0a",
+   "bytes": 11194
+  },
+  "units/crotale_ng.webp": {
+   "sha256": "3dcc8eb68eba6bcfe2a7f693f07c54a2333d372c14640897161c780690e7ba4b",
+   "bytes": 9604
+  },
+  "units/cruiser_rckt_california.webp": {
+   "sha256": "ae2b41a657e3daa2fcba0b8a24b7269a2b52b4e67e57c9ecb0406b1230b85a4d",
+   "bytes": 9650
+  },
+  "units/destroyer_cf_adams_class_cf_adams.webp": {
+   "sha256": "1368192e5d6dcb925f432a251edefa25472a4b1fda49846db780e0644199c921",
+   "bytes": 16056
+  },
+  "units/destroyer_pr56_bravy.webp": {
+   "sha256": "f5294c09296fb3f9d7f5ba0d5ac15490d9a4d6d6b07593c45d5b6e3d06d6154d",
+   "bytes": 14996
+  },
+  "units/destroyer_rckt_pr956.webp": {
+   "sha256": "22ea709f80b09cff3041b0f9a588f9a72f3de806e083575993d5ba369054362b",
+   "bytes": 9530
+  },
+  "units/flarakpz_1.webp": {
+   "sha256": "127becf32e9c8350d9f881e589b3eb5e87bbfc4a4ff1edee8ce8c9347abb7e27",
+   "bytes": 8314
+  },
+  "units/hq_11.webp": {
+   "sha256": "297d27f7c858dc767d97c58e8f652288373fe6a9930662c5766e60397aae454f",
+   "bytes": 10178
+  },
+  "units/m109a1.webp": {
+   "sha256": "8c71785dd5e649f6ef22f1ae804a0d1c6be33f64ddbcde5f2462b0b533a23839",
+   "bytes": 12726
+  },
+  "units/m163_vulcan.webp": {
+   "sha256": "15c80297558e1cd287fece519861da14d6e44324fec22ce4088ee8e6b2c42814",
+   "bytes": 9092
+  },
+  "units/m1a1_abrams.webp": {
+   "sha256": "3f9f0c88e4996dd4350f627af09fb80beed111e1bc51d1025f518c75a835db35",
+   "bytes": 11328
+  },
+  "units/m1a2_sep2.webp": {
+   "sha256": "abe2d7086aeec5ebd12349d6c8b6fdaebe98c2efcfe80a15713c3337939098df",
+   "bytes": 10480
+  },
+  "units/m3_bradley.webp": {
+   "sha256": "faa12aaec96de54c8f4630a134a8a2de3e936782398d90f42834c48a14eca527",
+   "bytes": 8806
+  },
+  "units/m3a3_bradley.webp": {
+   "sha256": "aaa520dc33d4bddb62886d463a45408a908e6c9416d63bc72f64f3baec6a6fd3",
+   "bytes": 9608
+  },
+  "units/m42_duster.webp": {
+   "sha256": "07cf2e6b1b4a9f3d66cd8854f83642178de1852328bd51fe2517b45cb5482ca3",
+   "bytes": 10006
+  },
+  "units/m551.webp": {
+   "sha256": "441ccfe991fc93c1960187d4eaf6ac19a7d22f0e3f98cd5899fd01b4892cc60c",
+   "bytes": 9568
+  },
+  "units/mim_104_patriot_launcher_m901.webp": {
+   "sha256": "698da9c6de552c16422d2f7c8d6aa328fac0254d49fd445ce83d17e2846de7dc",
+   "bytes": 10530
+  },
+  "units/mim_104_patriot_radar_an_mpq53.webp": {
+   "sha256": "fc5d53072cd979bdc186cf7343867ac7b4e74236eaf1fb44fcc7af6cc81878da",
+   "bytes": 9212
+  },
+  "units/mim_23_hawk_launcher_m192.webp": {
+   "sha256": "3e3aa44b335e825b81b7610bd2cdadaa336a2535accb45223293a8ec79b1e8ab",
+   "bytes": 8060
+  },
+  "units/mim_23_hawk_radar_an_mpq46.webp": {
+   "sha256": "0f007d33bd3db8422d515f609004c581eea833e3e4ab24ec08ea66d42011724b",
+   "bytes": 6940
+  },
+  "units/mim_23_hawk_radar_cwar.webp": {
+   "sha256": "8639dc58afc79f5792c9ee22253b99196d048aa50683b7707054cd94c426ce26",
+   "bytes": 6402
+  },
+  "units/mpk_pr_1124.webp": {
+   "sha256": "3da5decbff99dd582dcbdb975ef1da111ccbb82e3472d07aa337ea6594c67470",
+   "bytes": 17848
+  },
+  "units/nebo_55j6.webp": {
+   "sha256": "0659fd3c6792d95a63886f5f3df45d1b38f03a2c8d823eb9cc9be3c876049ec9",
+   "bytes": 18160
+  },
+  "units/otomatic.webp": {
+   "sha256": "4a8d5d987ef24c33cefaf8207b1026de54a224060555badd7c6bb52cf0a5cf45",
+   "bytes": 9514
+  },
+  "units/pantsyr_s1.webp": {
+   "sha256": "b5ad81d137d8635f54fcdfe7589e0f97f376a983338e683a286a3701dce4e4a8",
+   "bytes": 10992
+  },
+  "units/pzh_2000_germ.webp": {
+   "sha256": "a61466271595fa0e0ba9a6949d96554a8a5a8c0cc9dbdd6d441297e3cb1c5b0a",
+   "bytes": 10452
+  },
+  "units/rszo_smerch.webp": {
+   "sha256": "b560f68a49e1e717d26e3e12e279dcc910b30086427dc4b8364be16f5b205178",
+   "bytes": 8270
+  },
+  "units/s300ps_5n64s.webp": {
+   "sha256": "a70c2df0de26d3261824188c54e803f00264045688a6a22988979ca26622de09",
+   "bytes": 12780
+  },
+  "units/s300ps_command_post_5n63s.webp": {
+   "sha256": "f7da7fee74f09f2392d5426d458dab9298cc50e43f3044c09a984cd96f0b49e8",
+   "bytes": 10382
+  },
+  "units/s300ps_launcher_5p85se.webp": {
+   "sha256": "edbf66a1fac4bc6f08cc7578b3984a07a54d27b97940a592443e6d2fc9b687fb",
+   "bytes": 8410
+  },
+  "units/s75m_launcher_sm90.webp": {
+   "sha256": "0cb2b37a1307dff6ee85918ab2aee7dc3eb3c6e715fa543f3f777fc2712572ba",
+   "bytes": 4366
+  },
+  "units/s75m_radar_p12ma.webp": {
+   "sha256": "5db033fe666852b8241efd68d2366df1a62669b32c5eb11e880a25d51fe1def3",
+   "bytes": 13928
+  },
+  "units/samp_t_fcs.webp": {
+   "sha256": "61385b04382473aa3abc54dac07a6116c55d2cc83c2f13764872ad8c35ea2f17",
+   "bytes": 8354
+  },
+  "units/samp_t_launcher.webp": {
+   "sha256": "e6a91b2a268d7cc5503443a25b6052f31c559cfafd99dde29597f16047a4f442",
+   "bytes": 9620
+  },
+  "units/snr_75.webp": {
+   "sha256": "ea18928d277e3b5a465f3d2c03c4029603b4677d7ad28048efae1099713eb310",
+   "bytes": 11932
+  },
+  "units/spyder_aio.webp": {
+   "sha256": "48dcb14eae1683320b70340e427d456bf51020f920ef3ec655ab99da4db33bd1",
+   "bytes": 9688
+  },
+  "units/t_54_1951.webp": {
+   "sha256": "b6fa02fe9db319f0c78dbf100873665015fba060c09ed342a7a89bbc6575b8ba",
+   "bytes": 10932
+  },
+  "units/t_80bvm.webp": {
+   "sha256": "bfe78eb0992782349880193e17fdd8308decf7d5519e63d56311982a2069fbb9",
+   "bytes": 12140
+  },
+  "units/t_80u.webp": {
+   "sha256": "6e578813d573330a5c267d3e67b7e3893a621426da733d0584999a833c8e877f",
+   "bytes": 11154
+  },
+  "units/tps_59_radar.webp": {
+   "sha256": "78f08299624d9e60c683cb1a378c0a421113a7ab01ec020d51057c1a6893bf11",
+   "bytes": 13096
+  },
+  "units/type_03_chusam_fcs.webp": {
+   "sha256": "629980c315917108ca7626eaa857b3d1162b14fcff098b9ed8535357f3c1f7c8",
+   "bytes": 11348
+  },
+  "units/type_03_chusam_launcher.webp": {
+   "sha256": "4e92c92314a86ed066f054d572c4c7fa40616ceaf12cc505dd7dccc6a5255189",
+   "bytes": 11200
+  },
+  "units/us_m_270_mlrs.webp": {
+   "sha256": "cc6815282ff94a0df66be083c1c6d805bc53b89cd8a6c2c93b916b844dbc7a2d",
+   "bytes": 9192
+  },
+  "units/us_m_752_launcher.webp": {
+   "sha256": "607542b53dc206d1b1165e411ff72a3fbbf5183aa4637165843d649443049daf",
+   "bytes": 7216
+  },
+  "units/ussr_buk_m1.webp": {
+   "sha256": "d48c29500f4db1592b62d30c97e2d1443f25fe2fd97bd315a047d1e6c62793ad",
+   "bytes": 8148
+  },
+  "units/zsu_23_4.webp": {
+   "sha256": "33abe576ece69b4bda3436773f894d835fd71b219d58db9b2f4e50afe9219f5c",
+   "bytes": 8594
+  },
+  "units/zsu_23_4m4.webp": {
+   "sha256": "28ca7940e9ded4539d1a9b878b64926e0dda362ec19224a53eb35a8c2daed742",
+   "bytes": 9698
+  },
+  "units/zsu_57_2.webp": {
+   "sha256": "84eccd4ef42ee52744d4643abf1a49cf099929770cc853f9ed2bcee2c3cebb1f",
+   "bytes": 12272
+  }
+ },
+ "sources": [
+  {
+   "path": "aces.vromfs.bin_u/levels/air_archipelago.blkx",
+   "sha": "0e1b7b9ff959a7cabdae1cdd073602b501d2ab29"
+  },
+  {
+   "path": "aces.vromfs.bin_u/levels/air_kamchatka.blkx",
+   "sha": "36e22c6d240b0d102535d5d02068ab1e26f37669"
+  },
+  {
+   "path": "aces.vromfs.bin_u/levels/air_south_eastern_city.blkx",
+   "sha": "6cc5726fd2d8192b3112dac68f62e3cda3fa8dcb"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_archipelago_mirror_nuclear_escalation_tdm.blkx",
+   "sha": "031ef43349dfe066486fe79d2ace54b1ff209802"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_archipelago_nuclear_escalation_tdm.blkx",
+   "sha": "a143bd121f740295c23306f5c11ac0b6ecaa8601"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_kamchatka_mirror_nuclear_escalation_tdm.blkx",
+   "sha": "b27c65c19c15cb83d7cbb45d0eee621de1325ee0"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_kamchatka_nuclear_escalation_tdm.blkx",
+   "sha": "fb320a02bff66a8463f9d50eed6750959db2d804"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_south_eastern_city_mirror_nuclear_escalation_tdm.blkx",
+   "sha": "93fd62935f2423410de29f37c3bf1a9c0f67813c"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_south_eastern_city_nuclear_escalation_tdm.blkx",
+   "sha": "fccf2ec3869903cc218ed416f48847ce889ac873"
+  }
+ ],
+ "generated": "2026-11-13T21:17:29Z"
+}
