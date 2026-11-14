@@ -35,7 +35,31 @@
       "navmesh": null
     }
   },
-  "nuclear_weapon_name_hints": ["_nt", "b61", "b28", "b43", "b57", "b83", "rn_", "nuclear", "an_52", "we177", "tn_"],
-  "image": { "size": 4096, "quality": 80 },
-  "terrain": { "max_size": 2048 }
+  "nuclear_weapon_name_hints": [
+    "_nt",
+    "b61",
+    "b28",
+    "b43",
+    "b57",
+    "b83",
+    "rn_",
+    "nuclear",
+    "an_52",
+    "we177",
+    "tn_"
+  ],
+  "image": {
+    "size": 4096,
+    "quality": 80
+  },
+  "terrain": {
+    "max_size": 2048
+  },
+  "capture_radius_fallback": {
+    "fuel_factory": 40.0,
+    "ammo_factory": 40.0,
+    "assembly_area": 40.0,
+    "strongpoint": 100.0,
+    "airfield": 50.0
+  }
 }

@@ -18,11 +18,13 @@ interface Prefs {
   tab: "strike" | "defence" | "convoys" | "log";
   layers: Record<string, boolean>;
   sound: boolean; rail: boolean;
+  /** Terrain cover: follow the player's altitude, or use the fixed one. */
+  coverLive: boolean; coverAlt: number; coverAgl: boolean;
 }
 const defaults: Prefs = {
   level: "", variant: "standard", era: "", team: 1, tab: "strike",
-  layers: { rings: true, radar: false, friendly: true, roads: false, routes: true, grid: true, labels: true, aircraft: true, ships: true },
-  sound: true, rail: true,
+  layers: { cover: false, rings: true, radar: false, friendly: true, roads: false, routes: true, grid: true, labels: true, aircraft: true, ships: true },
+  sound: true, rail: true, coverLive: true, coverAlt: 500, coverAgl: false,
 };
 function readPrefs(): Prefs {
   try {

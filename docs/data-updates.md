@@ -25,10 +25,12 @@ The app checks that branch shortly after it starts (and on demand in Settings). 
 
 ## Sources
 
-- **Read directly from the datamine by this project:** the list of missions and maps, map bounds, mission settings, every vehicle's battle rating, unit names in all game languages, kill-feed wording, nuclear bomb yields.
-- **Taken from majorlier's Nuclear Thunder Interactive Map:** unit placements, mission rules and unit ranges (which that project extracts from the datamine), and terrain, roads and map pictures (which exist only in the installed game, not in the datamine).
+- **Read directly from the datamine by this project** (`pipeline/extract.py`, `pipeline/extras.py`): the list of missions and maps, every unit position for both side layouts and all BR brackets, convoy links, rocket-launcher areas, map bounds, mission settings, every vehicle's battle rating, unit names in all game languages, kill-feed wording and nuclear bomb yields.
+- **Taken from majorlier's Nuclear Thunder Interactive Map** (data files only): weapon and radar ranges, the mission's rule constants, and terrain, roads and map pictures. The last three exist only in the installed game, not in the datamine.
 
-If the datamine's event files change before the placements catch up, the manifest lists them under `pending_game_changes` and the app shows a notice that positions may be out of date.
+So a new map or BR bracket appears with correct positions as soon as it reaches the datamine. A unit type nobody has ranges for yet still shows up, just without a range ring. If the datamine's event files are newer than the reference ranges, the manifest lists them under `pending_game_changes` and Settings says so.
+
+`pipeline/compare.py` checks this project's extraction against the reference one. At game version 2.61.0.17 the two agree on all six missions: 11,468 unit placements, zero differences.
 
 ## A map the app has never seen
 

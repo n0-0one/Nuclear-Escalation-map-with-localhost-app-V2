@@ -7,6 +7,7 @@ import { effect } from "@preact/signals";
 import { packUrl } from "../transport";
 import { core, enemyTeam, eraIndex, focusRequest, hovered, isLive, level, prefs, selected, siteName, siteStates, snapshot, variant, view } from "../store";
 import type { Level, Site } from "../types";
+import { clearCover, coverCanvas, coverVersion, loadTerrain, requestCover, terrainReady } from "./cover";
 import { COLOR, drawChevron, drawSite, isMinor, label, rgba, sideColor } from "./symbols";
 
 interface Camera { x: number; z: number; ppm: number }
@@ -181,6 +182,14 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
       const detail = cam.ppm > 0.085; // individual vehicles become readable
       let animating = false;
 
+      // --- where air defences can actually see an aircraft, terrain included
+      const cover = layers.cover && terrainReady.value === l.id ? coverCanvas() : null;
+      if (cover && cover.width > 1) {
+        const [bx0, bz0, bx1, bz1] = l.bounds;
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(cover, sx(bx0), sy(bz1), (bx1 - bx0) * cam.ppm, (bz1 - bz0) * cam.ppm);
+      }
+
       // --- weapon reach of live air defences, merged into one envelope per side
       if (layers.rings) {
         const groups: Record<string, { x: number; y: number; r: number; minor: boolean; si: number }[]> = { enemy: [], friendly: [] };
@@ -253,7 +262,7 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
             sctx.fill();
           }
           ctx.globalAlpha = key === "enemy" ? 0.09 : 0.035;
-          ctx.drawImage(scratch, 0, 0);
+          if (!(cover && key === "enemy")) ctx.drawImage(scratch, 0, 0);
           ctx.restore();
           // The site under the cursor or selected shows its own ring.
           for (const circle of circles) {
@@ -641,6 +650,37 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
       effect(() => {
         prefs.value.layers;
         invalidate(true);
+      }),
+      effect(() => {
+        coverVersion.value;
+        invalidate();
+      }),
+      effect(() => {
+        // Recompute terrain cover when the sites, their state or the altitude change.
+        const l = level.value, v = variant.value, c = core.value, p = prefs.value;
+        if (!p.layers.cover) {
+          clearCover();
+          return;
+        }
+        if (!l || !v || !c || !l.terrain) return;
+        if (terrainReady.value !== l.id) {
+          loadTerrain(l).catch(() => {});
+          return;
+        }
+        const bit = eraIndex.value, enemy = enemyTeam.value, states = siteStates.value;
+        const sites: { x: number; z: number; reach: number }[] = [];
+        v.sites.forEach((site, si) => {
+          if (site.team !== enemy || (site.moves && site.cat !== "ship")) return;
+          const state = states.get(si);
+          let reach = 0;
+          site.units.forEach((u, slot) => {
+            if (((u.e >> bit) & 1) && state?.units.get(slot)?.[0] !== "destroyed") reach = Math.max(reach, reachOf(u.u), u.tr ?? 0);
+          });
+          if (reach > 0) sites.push({ x: site.p[0], z: site.p[1], reach });
+        });
+        const liveAlt = isLive.value ? snapshot.value?.player?.alt_m : null;
+        const follow = p.coverLive && liveAlt != null;
+        requestCover(l, sites, follow ? liveAlt! : p.coverAlt, follow ? false : p.coverAgl);
       }),
       effect(() => {
         const request = focusRequest.value;

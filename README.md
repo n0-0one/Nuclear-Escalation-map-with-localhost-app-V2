@@ -14,6 +14,7 @@ It reads what the game itself reports while you play and turns it into a plannin
 | **Tracks what is destroyed** | Reads the in-game kill feed and watches the map. A destroyed SAM launcher is crossed out and its range ring disappears. Each call is labelled *confirmed*, *probable* or *marked by you*. |
 | **Follows enemy columns** | Supply and armoured columns are followed while visible. When they are no longer spotted, the app keeps estimating where they are along their road and shows how sure it is. |
 | **Points out strike targets** | When a column drives next to a depot or strongpoint, that area lights up softly on the map and in the mini map, with a countdown before it happens. |
+| **Shows where you are hidden** | Terrain cover: the parts of the map where enemy air defence can actually see you at your current altitude, with hills and mountains blocking the rest. |
 | **Lists the nearest SAM sites** | Numbered 1-10 with distance, bearing and grid square, nearest first, so you can drop the game's aiming points on them quickly. |
 | **Stays current** | Map data is rebuilt automatically from the public War Thunder datamine after game updates and downloaded by the app. No reinstall needed. |
 | **Works without the game** | Study any map, side and BR bracket offline, or run the built-in demo battle. |
@@ -54,9 +55,9 @@ Gaijin can change or restrict that local page at any time. If they do, the app s
 
 ## Where the data comes from
 
-- Unit positions, mission rules, weapon and radar ranges, battle ratings and names: the public [War Thunder datamine](https://github.com/gszabi99/War-Thunder-Datamine).
-- Terrain, roads and map pictures, and the extraction of placements from the datamine: [Nuclear Thunder Interactive Map](https://github.com/majorlier/nuclear-thunder-interactive-map) by majorlier, which this project builds on.
-- How aiming points work: Gaijin's official news posts.
+- **Read directly from the public [War Thunder datamine](https://github.com/gszabi99/War-Thunder-Datamine) by this project:** every unit position for all maps, both side layouts and all BR brackets, convoy links, battle ratings, unit names and kill-feed wording.
+- **From [Nuclear Thunder Interactive Map](https://github.com/majorlier/nuclear-thunder-interactive-map) by majorlier, which this project builds on:** weapon and radar ranges, mission rule constants, and terrain, roads and map pictures (those three exist only in the installed game, not in the datamine).
+- **How aiming points work:** Gaijin's official news posts.
 
 See [NOTICE.md](NOTICE.md) for full credits. This is a fan project and is not affiliated with Gaijin Entertainment.
 

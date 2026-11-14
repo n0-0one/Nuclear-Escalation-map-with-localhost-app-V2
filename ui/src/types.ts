@@ -29,7 +29,7 @@ export interface Variant {
   id: string; mission: string; mirror: boolean; sites: Site[];
   supply_links: [string, string, number][]; armor_links: [string, string, number][];
   mobile: { id: string; team: number; kind: string; spawn: [number, number, number] | null; move: [number, number, number][] }[];
-  bombers: { id: string; team: number; aircraft: string; p: V2; alt: number }[];
+  bombers: { id: string; team: number; p: V2; alt: number }[];
   escalation: number[]; score_limit?: number; time_limit_min?: number;
 }
 export interface Level {

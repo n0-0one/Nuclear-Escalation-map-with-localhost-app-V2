@@ -5,19 +5,19 @@
 Where each part of the data comes from
 --------------------------------------
 * Straight from the public datamine (gszabi99/War-Thunder-Datamine), read by
-  this project's own code: which missions and maps exist, map bounds, mission
-  settings, every vehicle's battle rating, unit names in all languages,
-  kill-feed wording and nuclear bomb yields.
-* From majorlier's Nuclear Thunder Interactive Map, which extracts them from
-  the same datamine and from the installed game: unit placements, mission
-  rules, weapon and radar ranges, plus terrain, roads and map pictures (those
-  three only exist in the compiled game level, not in the datamine).
+  this project's own code: which missions and maps exist, every unit position
+  for both side layouts and all BR brackets, convoy links, launcher areas,
+  map bounds, mission settings, every vehicle's battle rating, unit names in
+  all languages, kill-feed wording and nuclear bomb yields.
+* From majorlier's Nuclear Thunder Interactive Map (data files only, none of
+  its code is run): weapon and radar ranges, the mission's rule constants,
+  and terrain, roads and map pictures. The last three only exist in the
+  compiled game level, not in the datamine.
 
-Only data files are read from either source; none of their code is run.
-
-When the datamine's event files are newer than the placements we have, the
-pack is still built and the manifest lists what changed under
-``pending_game_changes`` so the app can say that an update is pending.
+A new map or BR bracket therefore shows up with correct positions the day it
+reaches the datamine, even before anyone else has processed it. If the
+datamine's event files are newer than the reference ranges and rules, the
+manifest lists them under ``pending_game_changes``.
 """
 
 from __future__ import annotations
@@ -116,7 +116,6 @@ def main() -> int:
     command = [
         sys.executable, str(HERE / "pack.py"),
         "--raw", str(placements),
-        "--manifest", str(placements / "tools" / "datamine_sources.json"),
         "--datamine", str(args.work / "datamine"),
         "--assets-commit", placements_commit,
         "--out", str(args.out),

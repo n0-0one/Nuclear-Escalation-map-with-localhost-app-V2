@@ -2,10 +2,12 @@
 
 Inputs
 ------
---raw        folder with the mission extractor's output (map_data*.json,
-             mission_logic*.json, presets.json, unit_specs.json, ...)
---manifest   the extractor manifest that lists mission variants
---datamine   local clone of the War Thunder datamine (see datamine.py)
+--datamine   local clone of the War Thunder datamine (see datamine.py). Unit
+             positions for every map, side layout and BR bracket are read
+             from it by extract.py.
+--raw        optional reference extraction that supplies weapon and radar
+             ranges and the mission's rule constants (unit_specs.json,
+             mission_logic*.json)
 --assets     optional folder with level artwork/terrain/roads; when a level's
              files are missing the previously packed ones are kept
 
@@ -27,6 +29,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import extract  # noqa: E402
 import extras  # noqa: E402
 from datamine import Datamine, REPOSITORY  # noqa: E402
 
@@ -209,13 +212,12 @@ def pack_variant(raw_sites: list, logic: dict, era_ids: list[str], mission: dict
         "armor_links": links(logic.get("likely_armored_links", []), "assembly", "target"),
         "mobile": mobile,
         "bombers": [
-            {"id": item["name"], "team": int(item.get("team", 0)), "aircraft": item.get("aircraft", ""),
+            {"id": item["name"], "team": int(item.get("team", 0)),
              "p": xz(item["world_pos"]), "alt": r1(item["world_pos"][1])}
             for item in logic.get("bomber_spawns", [])
             if item.get("world_pos")
         ],
         "strike_targets": sorted({item["name"] for item in logic.get("mlrs_tbm_targets", []) if item.get("name") in known}),
-        "airfield_hp": {name: rule.get("hp") for name, rule in logic.get("airfield_rules", {}).items() if name in known},
     }
 
 
@@ -380,8 +382,8 @@ def sha256(path: Path) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--raw", type=Path, required=True)
-    parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--raw", "--reference", type=Path, dest="raw",
+                        help="reference extraction with unit ranges and mission rules")
     parser.add_argument("--datamine", type=Path, required=True)
     parser.add_argument("--assets", type=Path)
     parser.add_argument("--assets-commit", default="")
@@ -394,24 +396,19 @@ def main() -> int:
     out: Path = args.out
     (out / "levels").mkdir(parents=True, exist_ok=True)
 
-    manifest = load(args.manifest)
-    raw_id_by_mission = {
-        Path(item["path"]).name.removesuffix(".blkx"): item["id"] for item in manifest["mission_variants"]
-    }
+    # The reference extraction supplies what this project does not derive
+    # itself yet: weapon and radar ranges and the mission's rule constants.
+    reference = args.raw if args.raw and (args.raw / "unit_specs.json").exists() else None
+    reference_logic = {}
+    if reference:
+        for candidate in sorted(reference.glob("mission_logic*.json")):
+            reference_logic = load(candidate)
+            break
+    capture_radii = {**config["capture_radius_fallback"], **reference_logic.get("rules", {}).get("capture", {}).get("radii", {})}
 
-    def raw_file(prefix: str, raw_id: str) -> Path:
-        return args.raw / (f"{prefix}.json" if raw_id == "standard" else f"{prefix}_{raw_id}.json")
-
-    presets = load(args.raw / "presets.json")["presets"]
-    era_ids = [preset["id"] for preset in presets]
-    eras = []
-    for index, preset in enumerate(presets):
-        low, high = preset["rank_range"]
-        br_low = br_from_rank(low)
-        if index == 0:
-            br_low = max(br_low, config["event_min_br"])
-        eras.append({"id": preset["id"], "label": preset["label"], "rank": [low, high],
-                     "br": [br_low, br_from_rank(high)]})
+    source = extract.Source(dm)
+    eras: list[dict] = []
+    era_ids: list[str] = []
 
     missions = extras.discover_missions(dm, config)
     official_names = extras.level_names(dm)
@@ -431,15 +428,23 @@ def main() -> int:
         sources.append({"path": meta["path"], "sha": meta["sha"]})
         level_id = level.removeprefix("air_")
         variants = []
-        logic_any: dict = {}
         for mission in sorted(level_missions, key=lambda item: item["mirror"]):
-            raw_id = raw_id_by_mission.get(mission["mission"])
-            if raw_id is None or not raw_file("map_data", raw_id).exists():
-                problems.append(f"{mission['mission']}: no extracted data yet")
+            try:
+                raw_sites, mission_eras, document = extract.extract_mission(source, mission["path"])
+            except Exception as error:  # one unreadable mission must not sink the others
+                problems.append(f"{mission['mission']}: could not be read ({error})")
                 continue
-            logic = load(raw_file("mission_logic", raw_id))
-            logic_any = logic_any or logic
-            variant = pack_variant(load(raw_file("map_data", raw_id)), logic, era_ids, mission)
+            if not eras:
+                for index, era in enumerate(mission_eras):
+                    low, high = era["rank_range"]
+                    br_low = max(br_from_rank(low), config["event_min_br"]) if index == 0 else br_from_rank(low)
+                    eras.append({"id": era["id"], "label": era["label"], "rank": [low, high], "br": [br_low, br_from_rank(high)]})
+                era_ids = [era["id"] for era in eras]
+            elif [era["id"] for era in mission_eras] != era_ids:
+                problems.append(f"{mission['mission']}: uses different BR brackets than the other missions")
+                continue
+            logic = extract.mission_logic(document, raw_sites, capture_radii)
+            variant = pack_variant(raw_sites, logic, era_ids, mission)
             for site in variant["sites"]:
                 unit_ids.update(unit["u"] for unit in site["units"])
             variants.append(variant)
@@ -477,14 +482,9 @@ def main() -> int:
         })
 
     # ------------------------------------------------------------- core file
-    logic = None
-    for mission in missions:
-        raw_id = raw_id_by_mission.get(mission["mission"])
-        if raw_id and raw_file("mission_logic", raw_id).exists():
-            logic = load(raw_file("mission_logic", raw_id))
-            break
-    if logic is None:
-        raise SystemExit("No mission logic found; nothing to pack.")
+    logic = reference_logic
+    if not levels_index:
+        raise SystemExit("No mission could be read; nothing to pack.")
 
     def lower_names(value):
         """Unit ids are case-insensitive in the game files; keep one spelling."""
@@ -511,10 +511,10 @@ def main() -> int:
                             if isinstance(entries, list):
                                 unit_ids.update(item["name"] for item in entries if item.get("name"))
 
-    specs = {key.lower(): value for key, value in load(args.raw / "unit_specs.json").items()}
+    specs = {key.lower(): value for key, value in load(reference / "unit_specs.json").items()} if reference else {}
     names, hud_names, shop_names = extras.unit_tables(dm, unit_ids)
-    weapon_names_file = args.raw / "unit_weapon_display_names.json"
-    weapon_names = load(weapon_names_file).get("en", {}) if weapon_names_file.exists() else {}
+    weapon_names_file = reference / "unit_weapon_display_names.json" if reference else None
+    weapon_names = load(weapon_names_file).get("en", {}) if weapon_names_file and weapon_names_file.exists() else {}
     units = {
         unit_id: pack_unit(specs.get(unit_id, {"unit_class": unit_id}), names.get(unit_id), weapon_names)
         for unit_id in sorted(unit_ids)
@@ -569,7 +569,7 @@ def main() -> int:
                 if count < 50:
                     problems.append(f"{level['id']}/{variant['id']}: only {count} units in {era}")
     missing_specs = sorted(unit_id for unit_id in unit_ids if unit_id not in specs)
-    hard = [problem for problem in problems if "no extracted data yet" not in problem]
+    hard = list(problems)
 
     files = {}
     for path in sorted(out.rglob("*")):
@@ -586,7 +586,8 @@ def main() -> int:
         },
         "pending_game_changes": json.loads(args.pending),
         "files": files,
-        "sources": sorted(sources, key=lambda item: item["path"]),
+        "sources": sorted({item["path"]: item for item in [*sources, *({"path": path, "sha": sha} for path, sha in source.used.items())]}.values(),
+                          key=lambda item: item["path"]),
     }
     # The timestamp only changes when the content does, so an unchanged
     # datamine never produces a new pack revision.

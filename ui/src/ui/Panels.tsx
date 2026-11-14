@@ -2,7 +2,8 @@
 
 import { signal } from "@preact/signals";
 import { command, isDesktop, packUrl, shell } from "../transport";
-import { applySettings, core, enemyTeam, eraIndex, isLive, manifest, prefs, selected, setPref, siteName, siteStates, snapshot, toggleLayer, variant, view } from "../store";
+import { applySettings, core, enemyTeam, eraIndex, isLive, level, manifest, prefs, selected, setPref, siteName, siteStates, snapshot, toggleLayer, variant, view } from "../store";
+import { coverStats, terrainReady } from "../map/cover";
 import type { Placement, Proof, Status } from "../types";
 import { clock, km, weaponLabel } from "./format";
 import { settingsOpen } from "./TopBar";
@@ -103,6 +104,7 @@ export function SitePanel() {
 }
 
 const LAYERS: [string, string][] = [
+  ["cover", "Terrain cover"],
   ["rings", "Weapon reach"],
   ["radar", "Radar reach"],
   ["friendly", "Friendly forces"],
@@ -114,15 +116,48 @@ const LAYERS: [string, string][] = [
 ];
 
 export function Layers() {
-  const layers = prefs.value.layers;
+  const p = prefs.value, layers = p.layers;
+  const hasTerrain = !!level.value?.terrain;
+  const liveAlt = isLive.value ? snapshot.value?.player?.alt_m ?? null : null;
+  const following = p.coverLive && liveAlt !== null;
+  const stats = coverStats.value;
   return (
-    <div class="layers">
-      {LAYERS.map(([key, text]) => (
-        <button key={key} class={layers[key] ? "on" : ""} onClick={() => toggleLayer(key)} aria-pressed={layers[key]}>
-          <i />
-          {text}
-        </button>
-      ))}
+    <div class="layers-wrap">
+      <div class="layers">
+        {LAYERS.filter(([key]) => key !== "cover" || hasTerrain).map(([key, text]) => (
+          <button key={key} class={layers[key] ? "on" : ""} onClick={() => toggleLayer(key)} aria-pressed={layers[key]}>
+            <i />
+            {text}
+          </button>
+        ))}
+      </div>
+      {layers.cover && hasTerrain && (
+        <div class="cover-box">
+          <div class="cover-title">Where enemy air defence can see you</div>
+          <div class="cover-key"><i class="exposed" /> exposed <i class="hidden" /> hidden by terrain</div>
+          <label class="check">
+            <input type="checkbox" checked={p.coverLive} onChange={() => setPref({ coverLive: !p.coverLive })} />
+            Use my altitude in battle
+          </label>
+          {following ? (
+            <div class="mono cover-alt">{Math.round(liveAlt!)} m above sea level</div>
+          ) : (
+            <>
+              <input type="range" min={50} max={12000} step={50} value={p.coverAlt} onInput={(e) => setPref({ coverAlt: Number((e.target as HTMLInputElement).value) })} />
+              <div class="cover-row">
+                <span class="mono cover-alt">{p.coverAlt} m</span>
+                <button class={p.coverAgl ? "" : "on"} onClick={() => setPref({ coverAgl: false })}>above sea</button>
+                <button class={p.coverAgl ? "on" : ""} onClick={() => setPref({ coverAgl: true })}>above ground</button>
+              </div>
+            </>
+          )}
+          {terrainReady.value !== level.value?.id ? (
+            <div class="hint">Loading terrain…</div>
+          ) : stats && stats.exposed + stats.hidden > 0 ? (
+            <div class="hint">{Math.round((stats.hidden / (stats.exposed + stats.hidden)) * 100)}% of the area inside weapon reach is hidden by terrain. Earth curvature and missile altitude limits are not modelled.</div>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }
@@ -231,13 +266,17 @@ export function SettingsDialog() {
           <dt>Datamine revision</dt><dd class="mono">{m?.datamine.commit.slice(0, 10) ?? "—"}</dd>
           {appInfo.value && (<><dt>App version</dt><dd>{appInfo.value.version} · {appInfo.value.pack_source} data</dd></>)}
         </dl>
+        {(m?.pending_game_changes?.length ?? 0) > 0 && (
+          <p class="hint">The game's event files changed after the weapon ranges and mission rules in this data were extracted. Unit positions are current; ranges may lag until the next update.</p>
+        )}
         <div class="buttons">
           {isDesktop && <button onClick={checkUpdate}>Check for new map data</button>}
           {updateState.value && <span class="hint">{updateState.value}</span>}
         </div>
         <p class="hint">
-          Positions, units and ranges come from the public War Thunder datamine (gszabi99/War-Thunder-Datamine). Terrain and
-          roads come from majorlier's Nuclear Thunder Interactive Map. Not affiliated with Gaijin Entertainment.
+          Unit positions, battle ratings and names are read from the public War Thunder datamine
+          (gszabi99/War-Thunder-Datamine). Weapon ranges, terrain and roads come from majorlier's Nuclear Thunder
+          Interactive Map. Not affiliated with Gaijin Entertainment.
         </p>
       </div>
     </div>
