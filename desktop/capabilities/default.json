@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "What the app's own windows may do: receive engine updates and move the mini map window.",
+  "windows": ["main", "overlay"],
+  "permissions": ["core:event:default", "core:window:allow-start-dragging"]
+}

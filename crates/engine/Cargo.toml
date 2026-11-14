@@ -3,7 +3,6 @@ name = "ntl-engine"
 description = "Battle tracking engine for Nuclear Thunder Live"
 version.workspace = true
 edition.workspace = true
-license.workspace = true
 
 [lib]
 name = "ntl_engine"
