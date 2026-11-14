@@ -32,32 +32,43 @@ jobs:
       - run: pip install pillow
       - name: Rebuild the data pack
         run: python pipeline/update.py ${{ inputs.assets && '--assets' || '' }}
-      - name: Stop here when nothing changed
+      - name: See what changed
         id: diff
         run: |
-          if git diff --quiet -- data; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
+          main=false
+          feed=false
+          git diff --quiet -- data || main=true
+          # The feed is stale when it does not exist yet or differs from the fresh pack.
+          if git fetch --depth 1 origin data-feed 2>/dev/null; then
+            git diff --quiet FETCH_HEAD -- data || feed=true
+          else
+            feed=true
+          fi
+          echo "main=$main" >> "$GITHUB_OUTPUT"
+          echo "feed=$feed" >> "$GITHUB_OUTPUT"
+          if [ "$main" = false ] && [ "$feed" = false ]; then
             echo "Map data is already current." >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
             git diff --stat -- data >> "$GITHUB_STEP_SUMMARY"
           fi
       - uses: dtolnay/rust-toolchain@stable
-        if: steps.diff.outputs.changed == 'true'
+        if: steps.diff.outputs.main == 'true' || steps.diff.outputs.feed == 'true'
       - uses: Swatinem/rust-cache@v2
-        if: steps.diff.outputs.changed == 'true'
+        if: steps.diff.outputs.main == 'true' || steps.diff.outputs.feed == 'true'
       - name: Prove the engine works with the new data
-        if: steps.diff.outputs.changed == 'true'
+        if: steps.diff.outputs.main == 'true' || steps.diff.outputs.feed == 'true'
         run: cargo test --release -p ntl-engine
       - name: Publish
-        if: steps.diff.outputs.changed == 'true'
+        if: steps.diff.outputs.main == 'true' || steps.diff.outputs.feed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           version=$(python -c "import json; print(json.load(open('data/manifest.json'))['game_version'])")
-          git add data
-          git commit -m "Update map data for game version ${version}"
-          git push origin HEAD:main
+          if [ "${{ steps.diff.outputs.main }}" = true ]; then
+            git add data
+            git commit -m "Update map data for game version ${version}"
+            git push origin HEAD:main
+          fi
           # The feed installed apps read: just the data folder, one commit.
           git checkout --orphan feed
           git rm -r --cached . > /dev/null
