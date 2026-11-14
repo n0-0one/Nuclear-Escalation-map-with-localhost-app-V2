@@ -3,14 +3,17 @@
 // convention, so the map stays readable for colour-blind players.
 
 export const COLOR = {
-  hostile: "#ff5a47",
-  friendly: "#4aa3ff",
-  unknown: "#d9c46a",
-  amber: "#f2a900",
-  ink: "#e9ecee",
-  dim: "#8b949c",
-  panel: "#0d0f11",
+  hostile: "#ff453a",
+  friendly: "#0a84ff",
+  unknown: "#ffd60a",
+  amber: "#ff9f0a",
+  poi: "#64d2ff",
+  aim: "#ffd60a",
+  ink: "#f2f2f7",
+  dim: "#8e8e93",
+  panel: "#1c1c1e",
 };
+export const FONT = '"Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif';
 
 export const sideColor = (enemy: boolean) => (enemy ? COLOR.hostile : COLOR.friendly);
 
@@ -108,7 +111,7 @@ function glyph(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, c
       const letter: Record<string, string> = { fuel_factory: "F", ammo_factory: "A", assembly_area: "V", mlrs: "M", tbm: "T" };
       const text = letter[cat];
       if (!text) return;
-      ctx.font = `600 ${Math.round(r * 0.95)}px "JetBrains Mono", monospace`;
+      ctx.font = `700 ${Math.round(r * 0.95)}px ${FONT}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(text, x, y + r * 0.04);
@@ -130,9 +133,9 @@ export function drawSite(ctx: CanvasRenderingContext2D, x: number, y: number, o:
   }
 
   frame(ctx, x, y, r, o.enemy);
-  ctx.fillStyle = rgba(COLOR.panel, o.destroyed ? 0.55 : 0.88);
+  ctx.fillStyle = rgba(COLOR.panel, o.destroyed ? 0.6 : 0.9);
   ctx.fill();
-  ctx.strokeStyle = rgba(color, faded);
+  ctx.strokeStyle = o.destroyed ? rgba(COLOR.dim, 0.8) : rgba(color, faded);
   ctx.lineWidth = o.seen ? 2.25 : 1.5;
   ctx.stroke();
 
@@ -143,21 +146,33 @@ export function drawSite(ctx: CanvasRenderingContext2D, x: number, y: number, o:
   glyph(ctx, x, y, r, o.cat);
 
   if (o.destroyed) {
+    // a clear red cross: this site is out of the fight
     ctx.beginPath();
-    ctx.moveTo(x - r * 0.95, y + r * 0.95);
-    ctx.lineTo(x + r * 0.95, y - r * 0.95);
-    ctx.strokeStyle = rgba(COLOR.ink, 0.8);
-    ctx.lineWidth = 1.6;
+    ctx.moveTo(x - r * 0.8, y - r * 0.8);
+    ctx.lineTo(x + r * 0.8, y + r * 0.8);
+    ctx.moveTo(x + r * 0.8, y - r * 0.8);
+    ctx.lineTo(x - r * 0.8, y + r * 0.8);
+    ctx.strokeStyle = rgba(COLOR.panel, 0.9);
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    ctx.strokeStyle = COLOR.hostile;
+    ctx.lineWidth = 2.5;
     ctx.stroke();
   } else if (o.strength !== null && o.strength < 0.999 && o.total > 0) {
-    // strength bar: how much of the site is left
-    const w = Math.max(14, r * 1.7), h = 3, left = x - w / 2, top = y + r + 4;
-    ctx.fillStyle = rgba(COLOR.panel, 0.9);
-    ctx.fillRect(left - 1, top - 1, w + 2, h + 2);
-    ctx.fillStyle = rgba(COLOR.ink, 0.22);
-    ctx.fillRect(left, top, w, h);
+    // how much of the site is left, e.g. 3/6
+    const alive = Math.round(o.strength * o.total);
+    const text = `${alive}/${o.total}`;
+    ctx.font = `700 10.5px ${FONT}`;
+    const w = ctx.measureText(text).width + 8;
+    const left = x + r * 0.55, top = y - r - 7;
+    ctx.beginPath();
+    ctx.roundRect(left, top, w, 15, 7.5);
     ctx.fillStyle = COLOR.amber;
-    ctx.fillRect(left, top, w * o.strength, h);
+    ctx.fill();
+    ctx.fillStyle = "#1c1c1e";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, left + 4, top + 8);
   }
 }
 
@@ -191,7 +206,7 @@ export function drawChevron(ctx: CanvasRenderingContext2D, x: number, y: number,
 
 /** Text with a dark halo so it reads on any map background. */
 export function label(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, color = COLOR.ink, size = 11, align: CanvasTextAlign = "center") {
-  ctx.font = `600 ${size}px "Barlow Semi Condensed", "Bahnschrift", "Arial Narrow", sans-serif`;
+  ctx.font = `600 ${size}px ${FONT}`;
   ctx.textAlign = align;
   ctx.textBaseline = "top";
   ctx.lineJoin = "round";

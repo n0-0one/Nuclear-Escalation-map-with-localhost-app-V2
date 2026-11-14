@@ -29,15 +29,19 @@ Windows may show a "Windows protected your PC" notice because the installer is n
 
 ## Use it
 
-- **Top bar** - connection state, then *Map*, *Your side* and *BR bracket*. A small word next to each tells you how it was found: `detected`, `likely`, `guess` or `set by you`. Click one to change it.
-- **Map** - drag to move, scroll to zoom, Shift-drag to measure distance and bearing. Diamonds are enemy sites, rectangles are friendly ones. Zoom in to see every vehicle of a site. Click a site for its units, ranges and status.
-- **Strike** - alerts and the best places to hit right now.
-- **Air defence** - the ten nearest live enemy SAM sites.
-- **Convoys** - every column, where it is going and when it arrives, plus when each depot sends its next one.
-- **Log** - what happened, with the battle clock.
-- **Settings** - blast radius to plan with, alert timing, the mini map window, the demo battle and data updates.
+- **Top left** - the battle: connection state, map, your team and BR bracket. The app works these out by itself. Click it to change any of them, or to read how it decided. If it says *check side*, pick your team there.
+- **Filter row** - click **SAM sites** (or any other group) to see only that. Click **All** to see everything again. Hold Ctrl while clicking to combine groups. **Enemy only** hides your own side.
+- **Map** - drag to move, scroll to zoom, Shift-drag to measure. Diamonds are enemy sites, rectangles are friendly. **Hover a site** to see its vehicles with pictures and how many are destroyed; click it for full details.
+- **Destroyed units** - a destroyed site gets a red cross, a damaged one a badge such as `2/3`. The *Air defence* tab lists everything that has been knocked out.
+- **Your marks** - your point of interest is drawn as a large cyan crosshair with its distance, and aiming points as numbered yellow rings, when the game reports them.
+- **Side panel** - *Strike* (alerts and best targets), *Air defence* (the ten nearest live SAM sites), *Convoys* and *Log*.
+- **Top right** - overlays (weapon reach, terrain cover, radar reach, names, grid), the side panel switch and Settings.
 
 For the mini map window to stay on top of the game, run War Thunder in **borderless** or **windowed** mode.
+
+### If something looks wrong
+
+Open **Settings → Copy diagnostics** during the battle and paste the text into an issue. It lists what the game reported (kinds of map icons, colours, the latest kill-feed lines) and how the app read it. For a deeper look, **Record this battle** saves everything the game reports to a file on your computer.
 
 ## Is it allowed? Is it safe?
 

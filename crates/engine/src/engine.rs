@@ -214,6 +214,11 @@ pub struct DiagView {
     pub objects: usize,
     pub tracked_units: usize,
     pub units_on_map: usize,
+    /// Kill-feed lines received, and how many were understood as ground kills.
+    pub feed_lines: u32,
+    pub feed_kills: u32,
+    /// The latest kill-feed lines, to check the wording the game uses.
+    pub feed_samples: Vec<String>,
 }
 
 struct Other {
@@ -242,6 +247,9 @@ pub struct Engine {
     flight: Flight,
     player: Option<(V2, V2)>,
     others: Vec<Other>,
+    feed_lines: u32,
+    feed_kills: u32,
+    feed_samples: VecDeque<String>,
     seen_types: Vec<(String, u32)>,
     seen_colours: Vec<(String, u32)>,
     object_count: usize,
@@ -321,6 +329,9 @@ impl Engine {
             flight: Flight::default(),
             player: None,
             others: Vec::new(),
+            feed_lines: 0,
+            feed_kills: 0,
+            feed_samples: VecDeque::new(),
             seen_types: Vec::new(),
             seen_colours: Vec::new(),
             object_count: 0,
@@ -360,6 +371,9 @@ impl Engine {
         self.others.clear();
         self.seen_types.clear();
         self.seen_colours.clear();
+        self.feed_lines = 0;
+        self.feed_kills = 0;
+        self.feed_samples.clear();
         self.seq += 1;
     }
 
@@ -490,7 +504,13 @@ impl Engine {
                 self.clock_offset = Some(self.clock_offset.map_or(offset, |old| old.min(offset)));
             }
             self.last_hud_id = self.last_hud_id.max(line.id);
+            self.feed_lines += 1;
+            self.feed_samples.push_back(line.text.chars().take(160).collect());
+            while self.feed_samples.len() > 8 {
+                self.feed_samples.pop_front();
+            }
             let Some(ids) = parse_kill(&line.text, &self.pack) else { continue };
+            self.feed_kills += 1;
             self.ident.see_kill(&ids);
             let Some(world) = &mut self.world else { continue };
             let my_team = world.my_team;
@@ -565,7 +585,7 @@ impl Engine {
                         }
                     }
                 }
-                let mut tally = |map: HashMap<String, u32>| {
+                let tally = |map: HashMap<String, u32>| {
                     let mut list: Vec<(String, u32)> = map.into_iter().collect();
                     list.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
                     list.truncate(40);
@@ -715,6 +735,9 @@ impl Engine {
                 objects: self.object_count,
                 tracked_units: self.world.as_ref().map_or(0, |w| w.units.len()),
                 units_on_map: self.world.as_ref().map_or(0, |w| w.units.iter().filter(|u| u.visible(now)).count()),
+                feed_lines: self.feed_lines,
+                feed_kills: self.feed_kills,
+                feed_samples: self.feed_samples.iter().cloned().collect(),
             },
         };
         let Some(world) = &self.world else { return snapshot };

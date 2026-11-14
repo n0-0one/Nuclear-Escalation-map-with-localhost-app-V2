@@ -525,15 +525,17 @@ impl Identifier {
         } else {
             let mut reasons = Vec::new();
             if let Some(at_a) = ally_at_a {
-                reasons.push(format!("friendly forces hold the {} half ({} to {} votes)", if at_a { "team-1" } else { "team-2" }, winner, loser));
+                let whose = if at_a { "USSR side normally starts" } else { "NATO side normally starts" };
+                reasons.push(format!("your side's units stand where the {whose} ({winner} signs for, {loser} against)"));
             }
             if nation_agrees {
-                reasons.push(format!("your vehicle's nation ({}) flies for team {}", diag.nation, best.3));
+                reasons.push(format!("your vehicle's nation ({}) flies for the {} side", diag.nation, if best.3 == 1 { "USSR" } else { "NATO" }));
             }
             if best.1 > 0 {
                 reasons.push(format!("{} ground units fit{}", best.1, if use_coarse { " (roughly)" } else { "" }));
             }
-            next.why.push(format!("Side: team {}, {layout} layout - {}.", best.3, reasons.join("; ")));
+            let team = if best.3 == 1 { "USSR & China" } else { "NATO & allies" };
+            next.why.push(format!("Side: {team}, {layout} positions - {}.", reasons.join("; ")));
         }
 
         // BR bracket, judged inside the winning side

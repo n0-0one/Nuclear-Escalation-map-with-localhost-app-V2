@@ -355,23 +355,93 @@ def pack_images(level: str, assets: dict, source: Path | None, out: Path, config
     return result
 
 
-def pack_unit_art(models: set[str], source: Path | None, out: Path) -> list[str]:
-    available = sorted(path.stem for path in out.glob("*.webp")) if out.exists() else []
-    if not source or not (source / "images" / "portraits").exists():
-        return available
-    from PIL import Image
+GENERIC_ART = {
+    # class -> filled polygons on a 360 x 200 canvas (drawn for this project)
+    "truck": [[(40, 150), (40, 80), (190, 80), (190, 150)], [(198, 150), (198, 100), (250, 100), (285, 125), (300, 125), (300, 150)]],
+    "tank": [[(40, 150), (60, 118), (300, 118), (320, 150)], [(110, 118), (125, 85), (215, 85), (232, 118)], [(215, 92), (335, 92), (335, 102), (215, 102)]],
+    "launcher": [[(40, 150), (40, 122), (300, 122), (300, 150)], [(70, 118), (60, 104), (270, 52), (280, 68)], [(250, 122), (250, 96), (296, 96), (296, 122)]],
+    "sam": [[(60, 150), (60, 128), (300, 128), (300, 150)], [(120, 124), (112, 108), (262, 46), (272, 62)], [(96, 128), (150, 96), (164, 106), (130, 128)]],
+    "radar": [[(60, 150), (60, 122), (300, 122), (300, 150)], [(172, 122), (172, 70), (188, 70), (188, 122)], [(100, 70), (260, 70), (236, 34), (124, 34)]],
+    "ship": [[(20, 128), (340, 128), (300, 164), (56, 164)], [(110, 128), (110, 98), (240, 98), (240, 128)], [(160, 98), (160, 56), (176, 56), (176, 98)], [(60, 128), (60, 112), (100, 112), (100, 128)]],
+    "carrier": [[(14, 124), (346, 124), (318, 164), (50, 164)], [(214, 124), (214, 82), (262, 82), (262, 124)], [(232, 82), (232, 54), (244, 54), (244, 82)]],
+}
+GENERIC_WHEELS = {"truck": [70, 110, 230, 275], "launcher": [70, 120, 220, 270], "sam": [90, 150, 210, 270], "radar": [90, 150, 210, 270]}
+
+
+def art_class(spec: dict) -> str:
+    """Which stand-in drawing suits a unit that has no artwork."""
+    icon, name = str(spec.get("on_radar_as") or "").lower(), str(spec.get("unit_class") or "").lower()
+    if "carrier" in icon or "aircraftcarrier" in name:
+        return "carrier"
+    if any(word in icon for word in ("ship", "destroyer", "frigate", "cruiser", "boat", "corvette")) or spec.get("unit_type") in ("typeDestroyer", "typeFrigate"):
+        return "ship"
+    if "wheeled" in icon or "carrier" in name or "truck" in name:
+        return "truck"
+    if "tbm" in icon or "mlrs" in icon:
+        return "launcher"
+    if "radar" in icon:
+        return "radar"
+    if icon in ("sam", "airdefence", "spaa"):
+        return "sam"
+    return "tank"
+
+
+def pack_unit_art(units: dict[str, dict], specs: dict, source: Path | None, dm: Datamine, out: Path) -> None:
+    """Gives every unit a picture: ``units[id]["img"]`` names a file in ``units/``.
+
+    In order: the reference project's vehicle art, the game's own small
+    vehicle icon from the datamine, and last a plain stand-in drawing of the
+    unit's class.
+    """
+    from PIL import Image, ImageDraw
 
     out.mkdir(parents=True, exist_ok=True)
-    for model in sorted(models):
-        picture = source / "images" / "portraits" / f"{model}.png"
-        target = out / f"{model}.webp"
-        if not picture.exists() or target.exists():
+    portraits = {}
+    folder = source / "images" / "portraits" if source else None
+    if folder and folder.exists():
+        portraits = {path.stem.lower(): path for path in folder.glob("*.png")}
+    icons = {path.rsplit("/", 1)[-1][:-4].lower(): path for path in dm.ls("atlases.vromfs.bin_u/units") if path.endswith(".png")}
+
+    def save(image, target: Path) -> None:
+        image = image.convert("RGBA")
+        image.thumbnail((360, 360), Image.LANCZOS)
+        image.save(target, "WEBP", quality=72, method=6)
+
+    for unit_id, unit in units.items():
+        base = unit_id.rsplit("/", 1)[-1].lower()
+        model = unit["model"].lower()
+        stem = model or base
+        target = out / f"{stem}.webp"
+        if not target.exists():
+            portrait = portraits.get(model) or portraits.get(base)
+            icon = next((icons[key] for key in (base, base.removesuffix("_ai"), model) if key in icons), None)
+            if portrait:
+                with Image.open(portrait) as image:
+                    save(image, target)
+            elif icon:
+                import io
+
+                with Image.open(io.BytesIO(dm.read(icon))) as image:
+                    save(image, target)
+        if target.exists():
+            unit["img"] = stem
             continue
-        with Image.open(picture) as image:
-            image = image.convert("RGBA")
-            image.thumbnail((360, 360), Image.LANCZOS)
-            image.save(target, "WEBP", quality=72, method=6)
-    return sorted(path.stem for path in out.glob("*.webp"))
+        kind = art_class(specs.get(unit_id, {"unit_class": unit_id}))
+        generic = out / f"_{kind}.webp"
+        if not generic.exists():
+            scale = 2
+            image = Image.new("RGBA", (360 * scale, 200 * scale), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(image)
+            fill = (176, 184, 192, 255)
+            for polygon in GENERIC_ART[kind]:
+                draw.polygon([(x * scale, y * scale) for x, y in polygon], fill=fill)
+            for x in GENERIC_WHEELS.get(kind, []):
+                draw.ellipse([(x - 15) * scale, 138 * scale, (x + 15) * scale, 168 * scale], fill=fill)
+            if kind == "tank":
+                draw.rounded_rectangle([40 * scale, 146 * scale, 320 * scale, 170 * scale], radius=12 * scale, fill=fill)
+            image.resize((360, 200), Image.LANCZOS).save(generic, "WEBP", quality=80, method=6)
+        unit["img"] = f"_{kind}"
+        unit["img_generic"] = True
 
 
 # ---------------------------------------------------------------------- main
@@ -519,7 +589,7 @@ def main() -> int:
         unit_id: pack_unit(specs.get(unit_id, {"unit_class": unit_id}), names.get(unit_id), weapon_names)
         for unit_id in sorted(unit_ids)
     }
-    art = pack_unit_art({unit["model"] for unit in units.values() if unit["model"]}, args.assets, out / "units")
+    pack_unit_art(units, specs, args.assets, dm, out / "units")
 
     def convoy_era_label(key: str) -> list[str]:
         """Match a convoy template key such as ``1970_early`` to era ids by label."""
@@ -531,7 +601,6 @@ def main() -> int:
         "game_version": dm.game_version(),
         "eras": eras,
         "units": units,
-        "unit_art": art,
         "convoys": {
             group: [{"eras": convoy_era_label(key), "key": key, **value} for key, value in items.items()]
             for group, items in convoys.items()

@@ -36,7 +36,7 @@ export function Overlay() {
       }
       const s = snapshot.value, v = variant.value;
       if (!s || !v || !isLive.value || !s.player) {
-        label(ctx, s?.link === "offline" ? "GAME NOT DETECTED" : "WAITING FOR A BATTLE", cx, cy - 6, rgba(COLOR.ink, 0.7), 11);
+        label(ctx, s?.link === "offline" ? "Game not running" : "Waiting for a battle", cx, cy - 6, rgba(COLOR.ink, 0.7), 12);
         return;
       }
       const p = s.player;
@@ -100,7 +100,7 @@ export function Overlay() {
       ctx.closePath();
       ctx.fillStyle = COLOR.ink;
       ctx.fill();
-      label(ctx, `${RANGE_M / 1000} KM`, cx, cy - radius + 4, rgba(COLOR.ink, 0.55), 10);
+      label(ctx, `${RANGE_M / 1000} km`, cx, cy - radius + 4, rgba(COLOR.ink, 0.55), 10.5);
     };
     const stop = snapshot.subscribe(draw);
     const observer = new ResizeObserver(draw);
@@ -118,10 +118,10 @@ export function Overlay() {
     <div class="overlay" data-tauri-drag-region>
       <canvas ref={canvasRef} data-tauri-drag-region />
       <div class="overlay-lines" data-tauri-drag-region>
-        {threat && v && <div class="line hostile">IN RANGE · {siteName(v.sites[threat.site])} · {km(threat.dist_m)}</div>}
+        {threat && v && <div class="line hostile">In range · {siteName(v.sites[threat.site])} · {km(threat.dist_m)}</div>}
         {alert && v && (
           <div class="line amber">
-            {alert.phase === "now" ? "NOW" : `IN ${clock(alert.eta_s)}`} · {alert.count} units · {siteName(v.sites[alert.site])}
+            {alert.phase === "now" ? "Now" : `In ${clock(alert.eta_s)}`} · {alert.count} units · {siteName(v.sites[alert.site])}
           </div>
         )}
       </div>

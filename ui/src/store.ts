@@ -13,17 +13,36 @@ export const loadError = signal<string | null>(null);
 export const notice = signal<string | null>(null);
 export const UNKNOWN_MAP = "_live";
 
+/** Groups of site categories the map can be filtered by. */
+export const FILTERS: { id: string; label: string; cats: string[] }[] = [
+  { id: "sam", label: "SAM sites", cats: ["long_sam", "short_sam"] },
+  { id: "spaa", label: "SPAA", cats: ["sam_cover", "spaa_cover"] },
+  { id: "airfields", label: "Airfields", cats: ["airfield"] },
+  { id: "depots", label: "Depots", cats: ["assembly_area", "fuel_factory", "ammo_factory"] },
+  { id: "strongpoints", label: "Strongpoints", cats: ["strongpoint"] },
+  { id: "radars", label: "Radars", cats: ["ew_radar"] },
+  { id: "ships", label: "Ships", cats: ["ship"] },
+  { id: "launchers", label: "Launchers", cats: ["mlrs", "tbm"] },
+  { id: "convoys", label: "Convoys", cats: [] },
+];
+
 interface Prefs {
   level: string; variant: string; era: string; team: number;
   tab: "strike" | "defence" | "convoys" | "log";
+  /** Overlays drawn on top of the sites. */
   layers: Record<string, boolean>;
+  /** Filter ids to show; empty means everything. */
+  show: string[];
+  /** Hide friendly forces. */
+  enemyOnly: boolean;
   sound: boolean; rail: boolean;
   /** Terrain cover: follow the player's altitude, or use the fixed one. */
   coverLive: boolean; coverAlt: number; coverAgl: boolean;
 }
 const defaults: Prefs = {
   level: "", variant: "standard", era: "", team: 1, tab: "strike",
-  layers: { cover: false, rings: true, radar: false, friendly: true, roads: false, routes: true, grid: true, labels: true, aircraft: true, ships: true },
+  layers: { cover: false, rings: true, radar: false, routes: true, grid: true, labels: true, aircraft: true },
+  show: [], enemyOnly: false,
   sound: true, rail: true, coverLive: true, coverAlt: 500, coverAgl: false,
 };
 function readPrefs(): Prefs {
@@ -45,9 +64,31 @@ effect(() => {
 export const setPref = (patch: Partial<Prefs>) => (prefs.value = { ...prefs.value, ...patch });
 export const toggleLayer = (key: string) => setPref({ layers: { ...prefs.value.layers, [key]: !prefs.value.layers[key] } });
 
+/** Categories currently shown, or null when nothing is filtered out. */
+export const shownCategories = computed<Set<string> | null>(() => {
+  const show = prefs.value.show;
+  if (!show.length) return null;
+  return new Set(FILTERS.filter((f) => show.includes(f.id)).flatMap((f) => f.cats));
+});
+export const convoysShown = computed(() => !prefs.value.show.length || prefs.value.show.includes("convoys"));
+export function siteShown(site: Site): boolean {
+  const cats = shownCategories.value;
+  if (prefs.value.enemyOnly && site.team !== enemyTeam.value) return false;
+  return !cats || cats.has(site.cat);
+}
+/** Click = show only this; with Ctrl/Shift/Cmd = add or remove it. */
+export function pickFilter(id: string | null, additive: boolean) {
+  const current = prefs.value.show;
+  if (id === null) return setPref({ show: [] });
+  if (additive) return setPref({ show: current.includes(id) ? current.filter((x) => x !== id) : [...current, id] });
+  setPref({ show: current.length === 1 && current[0] === id ? [] : [id] });
+}
+
 /** Selected site index in the current variant. */
 export const selected = signal<number | null>(null);
 export const hovered = signal<number | null>(null);
+/** Where the pointer is while hovering a site, in window pixels. */
+export const hoverAt = signal<{ x: number; y: number } | null>(null);
 /** Ask the map to centre on a world position. */
 export const focusRequest = signal<{ p: [number, number]; zoom?: number; n: number } | null>(null);
 let focusCount = 0;

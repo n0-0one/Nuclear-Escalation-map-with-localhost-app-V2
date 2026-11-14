@@ -6,7 +6,7 @@
   "level_names": {
     "air_archipelago": "Archipelago",
     "air_south_eastern_city": "South Eastern City",
-    "air_kamchatka": "Kamchatka (Volcano Valley)"
+    "air_kamchatka": "Volcano Valley"
   },
   "terrain_source": {
     "repository": "majorlier/nuclear-thunder-interactive-map",

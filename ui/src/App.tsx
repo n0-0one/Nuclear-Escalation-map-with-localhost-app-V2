@@ -2,9 +2,9 @@ import { signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
 import { MapView } from "./map/MapView";
 import { level, loadError, notice, prefs, snapshot } from "./store";
-import { Layers, SettingsDialog, SitePanel } from "./ui/Panels";
-import { Rail } from "./ui/Rail";
-import { closeMenus, TopBar } from "./ui/TopBar";
+import { Bar, openPopover } from "./ui/Bar";
+import { SettingsDialog } from "./ui/Settings";
+import { HoverCard, Sidebar } from "./ui/Sidebar";
 
 const cursor = signal<[number, number] | null>(null);
 
@@ -53,26 +53,23 @@ export function App() {
   const position = cursor.value;
   const player = snapshot.value?.player;
   return (
-    <div class={`app ${prefs.value.rail ? "" : "no-rail"}`} onPointerDownCapture={(e) => !(e.target as HTMLElement).closest(".chip-wrap") && closeMenus()}>
-      <TopBar />
-      <main>
-        <MapView onCursor={(world) => (cursor.value = world)} />
-        <Layers />
-        <SitePanel />
-        <div class="readout mono">
-          {position ? (
-            <>
-              {gridRef(position)} <span class="dim">x</span> {Math.round(position[0])} <span class="dim">z</span> {Math.round(position[1])}
-              {player && <> <span class="dim">from you</span> {(Math.hypot(position[0] - player.p[0], position[1] - player.p[1]) / 1000).toFixed(1)} km</>}
-            </>
-          ) : (
-            <span class="dim">Drag to move · scroll to zoom · Shift-drag to measure</span>
-          )}
-        </div>
-        {loadError.value && <div class="error">{loadError.value}</div>}
-        {!loadError.value && notice.value && <div class="notice">{notice.value}</div>}
-      </main>
-      <Rail />
+    <div class="app" onPointerDownCapture={(e) => !(e.target as HTMLElement).closest(".anchor") && openPopover.value && (openPopover.value = null)}>
+      <MapView onCursor={(world) => (cursor.value = world)} />
+      <Bar />
+      <Sidebar />
+      <HoverCard />
+      <div class="readout material">
+        {position ? (
+          <>
+            <b>{gridRef(position)}</b>
+            {player && <span>{(Math.hypot(position[0] - player.p[0], position[1] - player.p[1]) / 1000).toFixed(1)} km from you</span>}
+          </>
+        ) : (
+          <span>Drag to move · scroll to zoom · Shift-drag to measure</span>
+        )}
+      </div>
+      {loadError.value && <div class="banner error material">{loadError.value}</div>}
+      {!loadError.value && notice.value && <div class="banner material">{notice.value}</div>}
       <SettingsDialog />
     </div>
   );

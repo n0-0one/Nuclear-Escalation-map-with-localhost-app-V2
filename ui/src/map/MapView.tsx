@@ -5,10 +5,10 @@
 import { useEffect, useRef } from "preact/hooks";
 import { effect } from "@preact/signals";
 import { packUrl } from "../transport";
-import { core, enemyTeam, eraIndex, focusRequest, hovered, isLive, level, prefs, selected, siteName, siteStates, snapshot, variant, view } from "../store";
+import { convoysShown, core, enemyTeam, eraIndex, focusRequest, hoverAt, hovered, isLive, level, prefs, selected, siteName, siteShown, siteStates, snapshot, variant, view } from "../store";
 import type { Level, Site } from "../types";
 import { clearCover, coverCanvas, coverVersion, loadTerrain, requestCover, terrainReady } from "./cover";
-import { COLOR, drawChevron, drawSite, isMinor, label, rgba, sideColor } from "./symbols";
+import { COLOR, FONT, drawChevron, drawSite, isMinor, label, rgba, sideColor } from "./symbols";
 
 interface Camera { x: number; z: number; ppm: number }
 
@@ -31,7 +31,7 @@ async function loadArtwork(l: Level): Promise<Artwork | null> {
     const ctx = canvas.getContext("2d")!;
     ctx.imageSmoothingQuality = "high";
     // Toned down so symbols and rings stand out from the terrain.
-    if (i === 0) ctx.filter = "brightness(0.62) saturate(0.7) contrast(1.05)";
+    if (i === 0) ctx.filter = "brightness(0.6) saturate(0.75) contrast(1.04)";
     ctx.drawImage(source, 0, 0, size, size);
     mips.push(canvas);
     source = canvas;
@@ -113,7 +113,7 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
     const paintBase = () => {
       const l = level.value;
       bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      bctx.fillStyle = "#0b0d0e";
+      bctx.fillStyle = "#101012";
       bctx.fillRect(0, 0, width, height);
       if (!l) return;
       const [x0, z0, x1, z1] = l.bounds;
@@ -144,8 +144,8 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
         }
         bctx.stroke();
         if (gx * cam.ppm > 46) {
-          bctx.font = '600 11px "JetBrains Mono", monospace';
-          bctx.fillStyle = "rgba(233,236,238,0.38)";
+          bctx.font = `600 11px ${FONT}`;
+          bctx.fillStyle = "rgba(242,242,247,0.3)";
           bctx.textBaseline = "top";
           for (let x = x0, i = 0; x < x1; x += gx, i++) {
             for (let z = z1, j = 0; z > z0; z -= gz, j++) {
@@ -180,6 +180,7 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
       const snap = isLive.value ? snapshot.value : null;
       const onScreen = (x: number, y: number, pad = 40) => x > -pad && y > -pad && x < width + pad && y < height + pad;
       const detail = cam.ppm > 0.085; // individual vehicles become readable
+      const showConvoys = convoysShown.value, enemyOnly = prefs.value.enemyOnly;
       let animating = false;
 
       // --- where air defences can actually see an aircraft, terrain included
@@ -195,9 +196,8 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
         const groups: Record<string, { x: number; y: number; r: number; minor: boolean; si: number }[]> = { enemy: [], friendly: [] };
         v.sites.forEach((site, si) => {
           const isEnemy = site.team === enemy;
-          if (!isEnemy && !layers.friendly) return;
+          if (!siteShown(site)) return;
           if (site.moves && site.cat !== "ship") return;
-          if (site.cat === "ship" && !layers.ships) return;
           const state = states.get(si);
           let reach = 0, radar = 0;
           site.units.forEach((u, slot) => {
@@ -281,7 +281,7 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
       // --- runways and ship routes
       for (const site of v.sites) {
         const color = sideColor(site.team === enemy);
-        for (const rw of site.rw ?? []) {
+        for (const rw of siteShown(site) ? site.rw ?? [] : []) {
           ctx.beginPath();
           ctx.moveTo(sx(rw[0]), sy(rw[1]));
           ctx.lineTo(sx(rw[2]), sy(rw[3]));
@@ -289,7 +289,7 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
           ctx.lineWidth = Math.max(2, rw[4] * cam.ppm);
           ctx.stroke();
         }
-        if (site.route && layers.ships && site.units.some((u) => (u.e >> bit) & 1)) {
+        if (site.route && siteShown(site) && site.units.some((u) => (u.e >> bit) & 1)) {
           polyline(ctx, site.route.pts);
           if (site.route.closed) ctx.closePath();
           ctx.strokeStyle = rgba(color, 0.3);
@@ -301,9 +301,9 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
       }
 
       // --- convoy roads ahead and uncertainty bands
-      if (snap && layers.routes) {
+      if (snap && layers.routes && showConvoys) {
         for (const convoy of snap.convoys) {
-          if (!convoy.enemy && !layers.friendly) continue;
+          if (!convoy.enemy && enemyOnly) continue;
           const color = sideColor(convoy.enemy);
           if (convoy.ahead.length >= 4) {
             polyline(ctx, convoy.ahead);
@@ -361,7 +361,7 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
           ctx.setLineDash(alert.phase === "now" ? [] : [5, 4]);
           ctx.stroke();
           ctx.setLineDash([]);
-          const text = alert.phase === "now" ? `${alert.count} UNITS` : `IN ${Math.floor(alert.eta_s / 60)}:${String(Math.round(alert.eta_s % 60)).padStart(2, "0")}`;
+          const text = alert.phase === "now" ? `${alert.count} units` : `in ${Math.floor(alert.eta_s / 60)}:${String(Math.round(alert.eta_s % 60)).padStart(2, "0")}`;
           label(ctx, text, px, py - r - 15, tone, 11);
         }
       }
@@ -371,12 +371,10 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
       const labelZoom = cam.ppm > 0.012;
       for (const si of order) {
         const site = v.sites[si];
-        if (site.cat === "radar_pad") continue;
-        if (site.cat === "ship" && !layers.ships) continue;
+        if (site.cat === "radar_pad" || !siteShown(site)) continue;
         const state = states.get(si)!;
         if (state.total === 0 && site.cat !== "airfield") continue;
         const isEnemy = site.team === enemy;
-        if (!isEnemy && !layers.friendly) continue;
         const px = sx(site.p[0]), py = sy(site.p[1]);
         if (!onScreen(px, py)) continue;
         const minor = isMinor(site.cat);
@@ -393,13 +391,17 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
             ctx.arc(ux, uy, 3.5, 0, Math.PI * 2);
             ctx.fillStyle = dead ? rgba(COLOR.panel, 0.8) : sideColor(isEnemy);
             ctx.fill();
-            ctx.strokeStyle = dead ? rgba(COLOR.ink, 0.5) : unit?.[2] ? COLOR.ink : rgba(COLOR.panel, 0.9);
+            ctx.strokeStyle = dead ? rgba(COLOR.dim, 0.9) : unit?.[2] ? COLOR.ink : rgba(COLOR.panel, 0.9);
             ctx.lineWidth = 1.25;
             ctx.stroke();
             if (dead) {
               ctx.beginPath();
-              ctx.moveTo(ux - 4, uy + 4);
-              ctx.lineTo(ux + 4, uy - 4);
+              ctx.moveTo(ux - 5, uy - 5);
+              ctx.lineTo(ux + 5, uy + 5);
+              ctx.moveTo(ux + 5, uy - 5);
+              ctx.lineTo(ux - 5, uy + 5);
+              ctx.strokeStyle = COLOR.hostile;
+              ctx.lineWidth = 2;
               ctx.stroke();
             }
             if (cam.ppm > 0.3) label(ctx, c.units[u.u]?.s ?? c.units[u.u]?.n ?? u.u, ux, uy + 6, rgba(COLOR.ink, 0.85), 10);
@@ -414,16 +416,66 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
           });
         }
         if (layers.labels && labelZoom && !minor && !detail) {
-          label(ctx, siteName(site).toUpperCase(), px, py + size + (snap && !state.destroyed && state.alive < state.total ? 10 : 4), rgba(COLOR.ink, state.destroyed ? 0.45 : 0.82), 10.5);
+          label(ctx, state.destroyed ? `${siteName(site)} · destroyed` : siteName(site), px, py + size + 4, state.destroyed ? rgba(COLOR.hostile, 0.95) : rgba(COLOR.ink, 0.85), 11);
         }
       }
 
       // --- live contacts
       if (snap) {
+        let aimNumber = 0;
         for (const contact of snap.contacts) {
-          if (contact.kind === "air" && !layers.aircraft) continue;
-          if (contact.aff !== "enemy" && !layers.friendly) continue;
           const px = sx(contact.p[0]), py = sy(contact.p[1]);
+          if (contact.kind === "aim") {
+            // the player's aiming points, numbered in the order the game lists them
+            aimNumber += 1;
+            if (!onScreen(px, py)) continue;
+            ctx.beginPath();
+            ctx.arc(px, py, 13, 0, Math.PI * 2);
+            ctx.fillStyle = rgba(COLOR.panel, 0.55);
+            ctx.fill();
+            ctx.strokeStyle = COLOR.aim;
+            ctx.lineWidth = 2.25;
+            ctx.setLineDash([7, 4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            label(ctx, String(aimNumber), px, py - 7, COLOR.aim, 12.5);
+            continue;
+          }
+          if (contact.kind === "poi") {
+            // the player's point of interest: large, with a lead line from the aircraft
+            if (snap.player) {
+              ctx.beginPath();
+              ctx.moveTo(sx(snap.player.p[0]), sy(snap.player.p[1]));
+              ctx.lineTo(px, py);
+              ctx.strokeStyle = rgba(COLOR.poi, 0.55);
+              ctx.lineWidth = 1.25;
+              ctx.setLineDash([3, 5]);
+              ctx.stroke();
+              ctx.setLineDash([]);
+            }
+            if (!onScreen(px, py)) continue;
+            for (const [radius, width, alpha] of [[19, 5, 0.28], [19, 2.25, 1], [8, 2, 1]] as const) {
+              ctx.beginPath();
+              ctx.arc(px, py, radius, 0, Math.PI * 2);
+              ctx.strokeStyle = rgba(COLOR.poi, alpha);
+              ctx.lineWidth = width;
+              ctx.stroke();
+            }
+            ctx.beginPath();
+            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+              ctx.moveTo(px + dx * 12, py + dy * 12);
+              ctx.lineTo(px + dx * 27, py + dy * 27);
+            }
+            ctx.strokeStyle = COLOR.poi;
+            ctx.lineWidth = 2.25;
+            ctx.stroke();
+            const away = snap.player ? ` · ${(Math.hypot(contact.p[0] - snap.player.p[0], contact.p[1] - snap.player.p[1]) / 1000).toFixed(1)} km` : "";
+            label(ctx, `Point of interest${away}`, px, py + 31, COLOR.poi, 12);
+            continue;
+          }
+          if (contact.kind === "air" && !layers.aircraft) continue;
+          if (contact.kind === "ground" && !showConvoys) continue;
+          if (contact.aff !== "enemy" && enemyOnly) continue;
           if (!onScreen(px, py)) continue;
           const color = contact.aff === "enemy" ? COLOR.hostile : contact.aff === "ally" ? COLOR.friendly : COLOR.unknown;
           if (contact.kind === "air") {
@@ -451,15 +503,15 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
             ctx.stroke();
           }
         }
-        for (const convoy of snap.convoys) {
-          if (!convoy.enemy && !layers.friendly) continue;
+        for (const convoy of showConvoys ? snap.convoys : []) {
+          if (!convoy.enemy && enemyOnly) continue;
           const px = sx(convoy.p[0]), py = sy(convoy.p[1]);
           if (!onScreen(px, py)) continue;
           const color = sideColor(convoy.enemy);
           const angle = Math.atan2(convoy.dir[0], convoy.dir[1]);
           drawChevron(ctx, px, py, angle, 9, color, convoy.state === "observed" ? "solid" : convoy.state === "predicted" ? "hollow" : "ghost");
           if (convoy.enemy || cam.ppm > 0.02) {
-            const tag = convoy.state === "observed" ? `×${convoy.n}` : convoy.state === "predicted" ? `×${convoy.n} EST` : "?";
+            const tag = convoy.state === "observed" ? `×${convoy.n}` : convoy.state === "predicted" ? `×${convoy.n} est.` : "?";
             label(ctx, tag, px + 12, py - 6, convoy.state === "observed" ? COLOR.ink : COLOR.amber, 10.5, "left");
           }
         }
@@ -487,7 +539,7 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
           ctx.lineWidth = 1.5;
           ctx.stroke();
           ctx.restore();
-          label(ctx, "YOU", px + 12, py - 5, COLOR.ink, 10.5, "left");
+          label(ctx, "You", px + 12, py - 6, COLOR.ink, 11.5, "left");
         }
       }
 
@@ -528,10 +580,10 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
     const siteAt = (px: number, py: number): number | null => {
       const v = variant.value;
       if (!v) return null;
-      const enemy = enemyTeam.value, layers = prefs.value.layers, states = siteStates.value;
+      const states = siteStates.value;
       let best: number | null = null, bestD = 18;
       v.sites.forEach((site: Site, si) => {
-        if (site.cat === "radar_pad" || (site.team !== enemy && !layers.friendly)) return;
+        if (site.cat === "radar_pad" || !siteShown(site)) return;
         if ((states.get(si)?.total ?? 0) === 0 && site.cat !== "airfield") return;
         const d = Math.hypot(sx(site.p[0]) - px, sy(site.p[1]) - py) + (isMinor(site.cat) ? 4 : 0);
         if (d < bestD) {
@@ -569,6 +621,10 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
       if (drag) {
         const dx = px - drag.x, dy = py - drag.y;
         if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+        if (drag.moved && hovered.value !== null) {
+          hovered.value = null;
+          hoverAt.value = null;
+        }
         cam.x -= dx / cam.ppm;
         cam.z += dy / cam.ppm;
         drag.x = px;
@@ -579,6 +635,7 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
       }
       const hit = siteAt(px, py);
       if (hit !== hovered.value) hovered.value = hit;
+      hoverAt.value = hit !== null ? { x: e.clientX, y: e.clientY } : null;
       host.style.cursor = hit !== null ? "pointer" : "grab";
     };
     const up = (e: PointerEvent) => {
@@ -607,6 +664,7 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
     const leave = () => {
       onCursor?.(null);
       if (hovered.value !== null) hovered.value = null;
+      hoverAt.value = null;
     };
     const noMenu = (e: Event) => e.preventDefault();
 
@@ -648,7 +706,7 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
         invalidate();
       }),
       effect(() => {
-        prefs.value.layers;
+        prefs.value.layers; prefs.value.show; prefs.value.enemyOnly;
         invalidate(true);
       }),
       effect(() => {

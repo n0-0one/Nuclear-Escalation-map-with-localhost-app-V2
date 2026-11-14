@@ -6,7 +6,7 @@ export type V2 = [number, number];
 export interface Era { id: string; label: string; rank: [number, number]; br: [number, number] }
 export interface Weapon { n: string; ammo?: number; min?: number; max?: number; g?: string; rl?: number }
 export interface UnitSpec {
-  n: string; s?: string; icon: string; type: string; model: string;
+  n: string; s?: string; icon: string; type: string; model: string; img?: string; img_generic?: boolean;
   det?: number; trk?: number; eng?: number; ai_eng?: number; gun?: number; kph?: number; w?: Weapon[];
 }
 export interface LevelRef {
@@ -14,7 +14,7 @@ export interface LevelRef {
   has_image: boolean; has_terrain: boolean; has_roads: boolean; variants: string[];
 }
 export interface Core {
-  schema: number; game_version: string; eras: Era[]; units: Record<string, UnitSpec>; unit_art: string[];
+  schema: number; game_version: string; eras: Era[]; units: Record<string, UnitSpec>;
   nukes: { id: string; yield_kt: number }[]; levels: LevelRef[];
   rules: Record<string, any>; respawn: any[]; template_restore: { restore_seconds?: number; depot_repair_seconds?: number };
   convoys: Record<string, any[]>;
@@ -48,7 +48,7 @@ export interface Settings {
   manual_level: string | null; manual_variant: string | null; manual_team: number | null; manual_era: string | null;
 }
 export interface Player { p: V2; dir: V2; alt_m: number | null; tas_kmh: number | null; vehicle: string | null; vehicle_name: string | null; br: number | null; grid: string | null }
-export interface Contact { p: V2; dir: V2; aff: "ally" | "enemy" | "unknown"; kind: "air" | "ground" | "zone"; icon: string; blink: boolean }
+export interface Contact { p: V2; dir: V2; aff: "ally" | "enemy" | "unknown"; kind: "air" | "ground" | "zone" | "poi" | "aim"; icon: string; blink: boolean }
 export interface Convoy {
   id: number; team: number; enemy: boolean; n: number; p: V2; dir: V2; speed: number;
   state: "observed" | "predicted" | "scheduled"; kind: "supply" | "armor" | null; from: number | null; to: number | null;
@@ -70,4 +70,5 @@ export interface Snapshot {
   convoys: Convoy[]; alerts: Alert[]; opportunities: Opportunity[]; cues: Cue[];
   schedules: { site: number; next_in: [number, number]; locked: boolean }[];
   log: LogEntry[]; settings: Settings; demo: { speed: number; t: number } | null; recording: string | null;
+  diag: Record<string, unknown>;
 }

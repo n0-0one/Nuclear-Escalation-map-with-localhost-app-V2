@@ -12,11 +12,11 @@
  "pending_game_changes": [],
  "files": {
   "core.json": {
-   "sha256": "585df00fda62736a836c1a146f82f776d47caadfb8ad1ae45e7274400a1982d1",
-   "bytes": 243193
+   "sha256": "19d2e4cb5db8d9e837edb0ac726d41929207ea39672225a651d32cda61eb8368",
+   "bytes": 244320
   },
   "levels/archipelago.height.json": {
-   "sha256": "d8625879a490666c018ba6c9c8146cf2389754b3f2a40de012836a2ec797f20a",
+   "sha256": "8813cd314c66acf705c98bdf2c78497a37d2439c5cf9a7588ea7fa7a4fb71449",
    "bytes": 59
   },
   "levels/archipelago.height.webp": {
@@ -28,7 +28,7 @@
    "bytes": 276901
   },
   "levels/archipelago.roads.json": {
-   "sha256": "1b69af7fec8baa0a5c92fba54c38061dea31027112be767b2762750402f2c9ad",
+   "sha256": "a0ffd99b508e70a991ab28425245a87fd84229b6bd401862c5f44d6e9546c1fa",
    "bytes": 354112
   },
   "levels/archipelago.webp": {
@@ -36,7 +36,7 @@
    "bytes": 1543310
   },
   "levels/kamchatka.height.json": {
-   "sha256": "97515dfbc16f02b89fd0e2b52b4e1c268d7e438e74d71b28dd826bec2dda55c8",
+   "sha256": "b66753c6bd57d28fd9b371a74abdcb5a751d8ada2d18a3c8200ce0482661d8d4",
    "bytes": 60
   },
   "levels/kamchatka.height.webp": {
@@ -44,11 +44,11 @@
    "bytes": 3237768
   },
   "levels/kamchatka.json": {
-   "sha256": "6da50600962a3e8506925c874596e8d69b27d1edc33e4da34f11aace086f4802",
-   "bytes": 261812
+   "sha256": "75896d0f58d4f00ea8171c66fa91ce64d0dfe242a39eaefb6d2c061dc7ff7cea",
+   "bytes": 261800
   },
   "levels/kamchatka.roads.json": {
-   "sha256": "cbc293f783833dae6a96371d021e1ba9aab5e8b0a76fd0ef25f87687b50626fb",
+   "sha256": "b5bf542eb676fa3653b1e6d1361c23967eb84322eecb4dd79a3e2ddef8133c31",
    "bytes": 264097
   },
   "levels/kamchatka.webp": {
@@ -56,7 +56,7 @@
    "bytes": 1557450
   },
   "levels/south_eastern_city.height.json": {
-   "sha256": "97cd57a9e45dfc1dc80581e5a1da4f11e105c8234328730887844f8ddd6949f8",
+   "sha256": "70751f5da5dfd62c57c30f0a6179d5dc6bdb07509d74d427ed2b4a08a93d3efa",
    "bytes": 59
   },
   "levels/south_eastern_city.height.webp": {
@@ -68,7 +68,7 @@
    "bytes": 250951
   },
   "levels/south_eastern_city.roads.json": {
-   "sha256": "e7317e66d929d46f539a12469dece0f297e89f898579b5a536d28ee0a336f94b",
+   "sha256": "1fec90b7bd08ae2831dee7674e467242bf02962a56a6f0695b17edba1f0dab90",
    "bytes": 157249
   },
   "levels/south_eastern_city.webp": {
@@ -110,6 +110,22 @@
   "units/9s18_m3.webp": {
    "sha256": "21f4a7481815648efccbcab9093f702cbdd7dcdba5116875d7f80f3d53a7bd41",
    "bytes": 8864
+  },
+  "units/_carrier.webp": {
+   "sha256": "8adcf40cd0d4760fee09b015fb34acd083a9bb0428131dba14b6a56fd896cf3a",
+   "bytes": 1528
+  },
+  "units/_launcher.webp": {
+   "sha256": "71e89f9b093a6ae5e4719541e0361fd9916cf7a441da32d446d1e56235b6859d",
+   "bytes": 3564
+  },
+  "units/_ship.webp": {
+   "sha256": "a200cae5bfac2ab851e5a633437aae11f14834d45b1271059e9b8358ae702daa",
+   "bytes": 1582
+  },
+  "units/_truck.webp": {
+   "sha256": "0be5cf07b6baef18746f10c66a40565ca306bf1f494e9e77fe18c57250d54ec7",
+   "bytes": 2106
   },
   "units/aircraftcarrier_admiral_kuznetsov.webp": {
    "sha256": "51366993100f59e44fa96df40b0d26b7acd70e4a7de334c82f066afb50292bb6",
@@ -159,6 +175,10 @@
    "sha256": "22ea709f80b09cff3041b0f9a588f9a72f3de806e083575993d5ba369054362b",
    "bytes": 9530
   },
+  "units/flakpz_1a2_gepard.webp": {
+   "sha256": "fd09c479b7608c5f26a5e43fb05c026d0c424aafa85aeed583cf32f9300e5723",
+   "bytes": 9106
+  },
   "units/flarakpz_1.webp": {
    "sha256": "127becf32e9c8350d9f881e589b3eb5e87bbfc4a4ff1edee8ce8c9347abb7e27",
    "bytes": 8314
@@ -194,6 +214,10 @@
   "units/m42_duster.webp": {
    "sha256": "07cf2e6b1b4a9f3d66cd8854f83642178de1852328bd51fe2517b45cb5482ca3",
    "bytes": 10006
+  },
+  "units/m48a1_patton_iii.webp": {
+   "sha256": "aeba7d34c5cd3544f86f1afe5ae3e58564b4c11698ffccd55dae091dd772a351",
+   "bytes": 10868
   },
   "units/m551.webp": {
    "sha256": "441ccfe991fc93c1960187d4eaf6ac19a7d22f0e3f98cd5899fd01b4892cc60c",
@@ -482,5 +506,5 @@
    "sha": "40ca7c509c04fc39eb6bd3a82b7b6b7cebcd70e6"
   }
  ],
- "generated": "2026-11-14T13:05:42Z"
+ "generated": "2026-11-14T18:09:50Z"
 }
