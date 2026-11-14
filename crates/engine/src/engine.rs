@@ -89,7 +89,7 @@ pub struct ContactView {
     pub dir: V2,
     /// "ally", "enemy" or "unknown"
     pub aff: &'static str,
-    /// "air", "ground" or "zone"
+    /// "air", "ground", "poi" (point of interest), "aim" (aiming point) or "zone"
     pub kind: &'static str,
     pub icon: String,
     pub blink: bool,
@@ -201,6 +201,19 @@ pub struct Snapshot {
     pub schedules: Vec<ScheduleView>,
     pub log: Vec<LogEntry>,
     pub settings: Settings,
+    pub diag: DiagView,
+}
+
+/// Raw facts about what the game reported, for troubleshooting.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct DiagView {
+    pub detection: crate::ident::Diagnostics,
+    /// "type/icon" of everything on the game's map, with counts.
+    pub seen: Vec<(String, u32)>,
+    pub colours: Vec<(String, u32)>,
+    pub objects: usize,
+    pub tracked_units: usize,
+    pub units_on_map: usize,
 }
 
 struct Other {
@@ -229,6 +242,9 @@ pub struct Engine {
     flight: Flight,
     player: Option<(V2, V2)>,
     others: Vec<Other>,
+    seen_types: Vec<(String, u32)>,
+    seen_colours: Vec<(String, u32)>,
+    object_count: usize,
     clock_offset: Option<f64>,
     last_hud_time: f64,
     last_hud_id: i64,
@@ -305,6 +321,9 @@ impl Engine {
             flight: Flight::default(),
             player: None,
             others: Vec::new(),
+            seen_types: Vec::new(),
+            seen_colours: Vec::new(),
+            object_count: 0,
             clock_offset: None,
             last_hud_time: f64::NEG_INFINITY,
             last_hud_id: 0,
@@ -339,6 +358,8 @@ impl Engine {
         self.last_hud_time = f64::NEG_INFINITY;
         self.player = None;
         self.others.clear();
+        self.seen_types.clear();
+        self.seen_colours.clear();
         self.seq += 1;
     }
 
@@ -368,15 +389,18 @@ impl Engine {
         self.ident.identity.level.map(|li| MapFrame::from_bounds(self.pack.levels[li].bounds))
     }
 
-    fn vehicle_rank(&self) -> Option<i32> {
+    /// The player's vehicle as (economic rank, country), when the data knows it.
+    fn vehicle_info(&self) -> Option<(i32, String)> {
         let vehicle = self.vehicle.as_ref()?;
-        self.pack.core.vehicles.get(&vehicle.id).map(|entry| entry.0)
+        // The game reports ids with either dashes or underscores.
+        let entry = self.pack.core.vehicles.get(&vehicle.id).or_else(|| self.pack.core.vehicles.get(&vehicle.id.replace('-', "_")))?;
+        Some((entry.0, entry.1.clone()))
     }
 
     fn reidentify(&mut self) {
         let frame = self.map_info.as_ref().map(|info| MapFrame { min: V2(info.min[0], info.min[1]), max: V2(info.max[0], info.max[1]) });
-        let rank = self.vehicle_rank();
-        let changed = self.ident.evaluate(&self.pack, frame, rank, &self.settings.manual());
+        let vehicle = self.vehicle_info();
+        let changed = self.ident.evaluate(&self.pack, frame, vehicle.as_ref().map(|v| (v.0, v.1.as_str())), &self.settings.manual());
         let identity = &self.ident.identity;
         let wanted = match (identity.level, identity.variant, identity.team, identity.era) {
             (Some(l), Some(v), Some(t), Some(e)) => Some((l, v, e, t)),
@@ -503,7 +527,12 @@ impl Engine {
                 self.player = None;
                 self.others.clear();
                 let mut ground: Vec<(V2, Aff, &str, bool)> = Vec::new();
+                let mut types: HashMap<String, u32> = HashMap::new();
+                let mut colours: HashMap<String, u32> = HashMap::new();
+                self.object_count = objects.len();
                 for obj in objects {
+                    *types.entry(format!("{}/{}", obj.type_name, obj.icon)).or_insert(0) += 1;
+                    *colours.entry(format!("#{:02x}{:02x}{:02x}", obj.rgb[0], obj.rgb[1], obj.rgb[2])).or_insert(0) += 1;
                     let aff = affiliation(obj, swapped);
                     let p = map.to_world(obj.x, obj.y);
                     let dir = V2(obj.dx, -obj.dy).unit();
@@ -522,10 +551,30 @@ impl Engine {
                             if aff == Aff::Player {
                                 self.player = Some((p, dir));
                             } else {
-                                self.others.push(Other { p, dir, aff, kind: "zone", icon: obj.icon.clone(), blink: obj.blink })
+                                // The player's own marks: the point of interest and aiming points.
+                                let key = format!("{} {}", obj.type_name, obj.icon).to_lowercase();
+                                let kind = if key.contains("interest") {
+                                    "poi"
+                                } else if key.contains("aim") || key.contains("bombing_target") || key.contains("target_point") {
+                                    "aim"
+                                } else {
+                                    "zone"
+                                };
+                                self.others.push(Other { p, dir, aff, kind, icon: obj.icon.clone(), blink: obj.blink })
                             }
                         }
                     }
+                }
+                let mut tally = |map: HashMap<String, u32>| {
+                    let mut list: Vec<(String, u32)> = map.into_iter().collect();
+                    list.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+                    list.truncate(40);
+                    list
+                };
+                self.seen_types = tally(types);
+                self.seen_colours = tally(colours);
+                if let Some((p, _)) = self.player {
+                    self.ident.see_player(p);
                 }
                 self.ident.see_airfields(airfields);
                 self.reidentify();
@@ -659,6 +708,14 @@ impl Engine {
             schedules: Vec::new(),
             log: self.log.iter().rev().take(60).cloned().collect(),
             settings: self.settings.clone(),
+            diag: DiagView {
+                detection: self.ident.diagnostics.clone(),
+                seen: self.seen_types.clone(),
+                colours: self.seen_colours.clone(),
+                objects: self.object_count,
+                tracked_units: self.world.as_ref().map_or(0, |w| w.units.len()),
+                units_on_map: self.world.as_ref().map_or(0, |w| w.units.iter().filter(|u| u.visible(now)).count()),
+            },
         };
         let Some(world) = &self.world else { return snapshot };
         let variant = &self.pack.levels[world.level].variants[world.variant];

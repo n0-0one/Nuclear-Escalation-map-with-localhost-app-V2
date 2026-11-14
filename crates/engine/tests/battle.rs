@@ -181,3 +181,41 @@ fn a_new_battle_clears_the_old_one() {
     let id = engine.identity();
     assert_eq!((id.level, id.variant, id.team, id.era), (Some(2), Some(1), Some(2), Some(4)), "{:?}", id.why);
 }
+
+/// The first real match showed that detection must not depend on any single
+/// clue. Here airfields carry no team colour and every ground unit is 70 m
+/// away from where the mission data puts it.
+#[test]
+fn finds_the_side_when_the_usual_clues_are_missing() {
+    let pack = pack();
+    for level in 0..pack.levels.len() {
+        for variant in 0..2 {
+            for team in 1..=2u8 {
+                let mut sim = Sim::new(pack.clone(), level, variant, 2, team, 900 + (level * 10 + variant) as u64 + team as u64);
+                sim.neutral_airfields = true;
+                sim.position_error_m = 70.0;
+                let mut engine = Engine::new(pack.clone());
+                run(&mut sim, &mut engine, 15.0, |_, _| {});
+                let id = engine.identity();
+                let label = format!("{} layout {variant} team {team}", pack.levels[level].id);
+                assert_eq!(id.level, Some(level), "map: {label}: {:?}", id.why);
+                assert_eq!(id.variant, Some(variant), "layout: {label}: {:?}", id.why);
+                assert_eq!(id.team, Some(team), "team: {label}: {:?}", id.why);
+                assert!(engine.world().is_some(), "tracking starts even on a best guess: {label}");
+            }
+        }
+    }
+}
+
+#[test]
+fn reports_the_players_own_marks() {
+    let pack = pack();
+    let mut sim = Sim::new(pack.clone(), 2, 1, 2, 2, 77);
+    let mut engine = Engine::new(pack.clone());
+    run(&mut sim, &mut engine, 10.0, |_, _| {});
+    let snapshot = engine.snapshot();
+    assert_eq!(snapshot.contacts.iter().filter(|c| c.kind == "poi").count(), 1);
+    assert_eq!(snapshot.contacts.iter().filter(|c| c.kind == "aim").count(), 4);
+    assert!(snapshot.diag.seen.iter().any(|(name, _)| name.starts_with("point_of_interest")));
+    assert!(snapshot.diag.detection.fixed_friendly > 50);
+}

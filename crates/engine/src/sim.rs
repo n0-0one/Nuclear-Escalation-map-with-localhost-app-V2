@@ -109,6 +109,13 @@ pub struct Sim {
     /// Chance that a kill hits a unit currently on the player's map.
     pub visible_kill_bias: f64,
     pub kill_every: (f64, f64),
+    /// Paint airfields in a neutral colour instead of the team colours.
+    pub neutral_airfields: bool,
+    /// Shift every ground unit by a fixed offset of up to this many metres,
+    /// as if the mission data were slightly off.
+    pub position_error_m: f64,
+    /// Add point-of-interest and aiming-point marks to the map.
+    pub player_marks: bool,
 }
 
 impl Sim {
@@ -201,6 +208,8 @@ impl Sim {
             .vehicles
             .iter()
             .filter(|(_, v)| v.2 == "fighter" && v.0 >= eras[era].rank[0] && v.0 <= eras[era].rank[1])
+            // team 1 flies USSR and Chinese aircraft, team 2 everything else
+            .filter(|(_, v)| matches!(v.1.as_str(), "ussr" | "china") == (my_team == 1))
             .map(|(id, _)| id)
             .collect();
         candidates.sort();
@@ -225,6 +234,9 @@ impl Sim {
             generation: 1 + (seed % 1000) as i64,
             visible_kill_bias: 0.75,
             kill_every: (14.0, 34.0),
+            neutral_airfields: false,
+            position_error_m: 0.0,
+            player_marks: true,
             rng,
             pack,
         }
@@ -392,14 +404,19 @@ impl Sim {
                     for runway in &site.rw {
                         let (sx, sy) = frame.to_norm(V2(runway[0], runway[1]));
                         let (ex, ey) = frame.to_norm(V2(runway[2], runway[3]));
-                        objects.push(json!({"type":"airfield","color":colour(site.team),"color[]":rgb(site.team),"blink":0,"icon":"none","icon_bg":"none","sx":sx,"sy":sy,"ex":ex,"ey":ey}));
+                        let (c, c3) = if self.neutral_airfields { ("#c8c8c8", json!([200, 200, 200])) } else { (colour(site.team), rgb(site.team)) };
+                        objects.push(json!({"type":"airfield","color":c,"color[]":c3,"blink":0,"icon":"none","icon_bg":"none","sx":sx,"sy":sy,"ex":ex,"ey":ey}));
                     }
                 }
                 for unit in &self.units {
                     if !unit.alive || (unit.team != self.my_team && unit.detected_until <= self.t) {
                         continue;
                     }
-                    let (x, y) = frame.to_norm(unit.pos);
+                    // a repeatable per-unit offset
+                    let wobble = (unit.site as f64 * 12.9898 + unit.slot as f64 * 78.233).sin() * 43758.5453;
+                    let angle = (wobble - wobble.floor()) * std::f64::consts::TAU;
+                    let shifted = unit.pos.add(V2(angle.cos(), angle.sin()).scale(self.position_error_m));
+                    let (x, y) = frame.to_norm(shifted);
                     let icon = self.pack.core.units.get(&unit.id).map_or("Tank", |u| u.icon.as_str());
                     objects.push(json!({"type":"ground_model","color":colour(unit.team),"color[]":rgb(unit.team),"blink":0,"icon":icon,"icon_bg":"none","x":x,"y":y}));
                 }
@@ -424,6 +441,17 @@ impl Sim {
                     }
                     let (x, y) = frame.to_norm(p);
                     objects.push(json!({"type":"aircraft","color":colour(plane.team),"color[]":rgb(plane.team),"blink":0,"icon":"Fighter","icon_bg":"none","x":x,"y":y,"dx":dir.0,"dy":-dir.1}));
+                }
+                if self.player_marks {
+                    let enemy_sites: Vec<V2> = var.sites.iter().filter(|s| s.team != self.my_team && s.is_air_defence()).map(|s| s.p).collect();
+                    if let Some(first) = enemy_sites.first() {
+                        let (x, y) = frame.to_norm(*first);
+                        objects.push(json!({"type":"point_of_interest","color":"#ff0000","color[]":[255,0,0],"blink":0,"icon":"none","icon_bg":"none","x":x,"y":y}));
+                    }
+                    for site in enemy_sites.iter().skip(1).take(4) {
+                        let (x, y) = frame.to_norm(*site);
+                        objects.push(json!({"type":"aiming_point","color":"#ffd200","color[]":[255,210,0],"blink":0,"icon":"none","icon_bg":"none","x":x,"y":y}));
+                    }
                 }
                 let (x, y) = frame.to_norm(player);
                 objects.push(json!({"type":"aircraft","color":"#faC81E","color[]":[250,200,30],"blink":0,"icon":"Player","icon_bg":"none","x":x,"y":y,"dx":heading.0,"dy":-heading.1}));

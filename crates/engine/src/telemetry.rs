@@ -26,6 +26,8 @@ pub enum Kind {
 #[derive(Debug, Clone)]
 pub struct MapObj {
     pub kind: Kind,
+    /// The game's own type name, kept so new kinds of markers can be told apart.
+    pub type_name: String,
     pub icon: String,
     pub rgb: [u8; 3],
     pub blink: bool,
@@ -169,6 +171,7 @@ pub fn parse_map_obj(text: &str) -> Option<Vec<MapObj>> {
         };
         out.push(MapObj {
             kind,
+            type_name: type_name.chars().take(48).collect(),
             icon,
             rgb: rgb(item),
             blink: num(item, "blink").unwrap_or(0.0) != 0.0,
