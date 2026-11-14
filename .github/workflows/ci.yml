@@ -6,6 +6,11 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Publish a release with this tag (for example v2.0.0). Leave empty to only build."
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -102,9 +107,12 @@ jobs:
             out/SHA256SUMS.txt
           if-no-files-found: error
       - name: Publish the release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release != ''
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.release || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: Nuclear Thunder Live ${{ inputs.release || github.ref_name }}
           generate_release_notes: true
           files: |
             out/Nuclear-Thunder-Live-Setup.exe

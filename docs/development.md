@@ -38,4 +38,4 @@ cd ui && npm ci && npm run build && cd ../desktop
 npx @tauri-apps/cli@2 build
 ```
 
-The installer is written to `target/release/bundle/nsis/`. Pushing a tag such as `v2.0.0` makes the build workflow publish a release with the installer and a portable ZIP.
+The installer is written to `target/release/bundle/nsis/`. To publish a release, run the **Build and test** workflow from the Actions tab and type the version tag (for example `v2.0.1`) into the *release* box, or push a tag that starts with `v`. The release gets the installer, a portable ZIP and checksums.
