@@ -601,6 +601,8 @@ def main() -> int:
         "game_version": dm.game_version(),
         "eras": eras,
         "units": units,
+        # Read by app version 2.0; newer versions use each unit's "img".
+        "unit_art": sorted({unit["img"] for unit in units.values() if not unit.get("img_generic")}),
         "convoys": {
             group: [{"eras": convoy_era_label(key), "key": key, **value} for key, value in items.items()]
             for group, items in convoys.items()

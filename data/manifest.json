@@ -12,8 +12,8 @@
  "pending_game_changes": [],
  "files": {
   "core.json": {
-   "sha256": "19d2e4cb5db8d9e837edb0ac726d41929207ea39672225a651d32cda61eb8368",
-   "bytes": 244320
+   "sha256": "d48b2bfea02331eb52f2baaebb0621c0995ead36325c9090b22aa3fe63cab398",
+   "bytes": 245393
   },
   "levels/archipelago.height.json": {
    "sha256": "8813cd314c66acf705c98bdf2c78497a37d2439c5cf9a7588ea7fa7a4fb71449",
@@ -506,5 +506,5 @@
    "sha": "40ca7c509c04fc39eb6bd3a82b7b6b7cebcd70e6"
   }
  ],
- "generated": "2026-11-14T18:09:50Z"
+ "generated": "2026-11-14T18:13:15Z"
 }
