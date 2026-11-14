@@ -212,7 +212,9 @@ impl Identifier {
                 next.level = Some(li);
                 next.level_conf = if hits >= 3 { Confidence::Confirmed } else { Confidence::Likely };
                 next.why.push(format!("Map: {hits} runways match {}.", pack.levels[li].name));
-            } else if level_scores.len() == 1 && frame.is_some() {
+            } else if level_scores.len() == 1 && frame.is_some() && self.airfields.len() < 2 {
+                // Same size and no runways seen yet. Once runways are visible
+                // and none fits, this is a map the data pack does not know.
                 next.level = Some(li);
                 next.level_conf = Confidence::Guess;
                 next.why.push(format!("Map: only {} has this size.", pack.levels[li].name));

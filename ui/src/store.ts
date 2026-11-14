@@ -9,6 +9,9 @@ export const manifest = signal<Manifest | null>(null);
 export const snapshot = signal<Snapshot | null>(null);
 export const level = signal<Level | null>(null);
 export const loadError = signal<string | null>(null);
+/** One-line message from the app itself (for example "new map data ready"). */
+export const notice = signal<string | null>(null);
+export const UNKNOWN_MAP = "_live";
 
 interface Prefs {
   level: string; variant: string; era: string; team: number;
@@ -50,7 +53,7 @@ export const focusOn = (p: [number, number], zoom?: number) => (focusRequest.val
 
 const live = computed(() => {
   const s = snapshot.value;
-  return !!s && s.link === "battle" && !!s.battle.level;
+  return !!s && s.link === "battle" && (!!s.battle.level || s.unknown_map);
 });
 export const isLive = live;
 
@@ -61,6 +64,10 @@ export const view = computed(() => {
   const c = core.value;
   const fallbackLevel = p.level || c?.levels[0]?.id || "";
   const fallbackEra = p.era || c?.eras[c.eras.length - 1]?.id || "";
+  if (s && s.link === "battle" && s.unknown_map) {
+    // A map the data pack does not know: show the game's own picture of it.
+    return { level: UNKNOWN_MAP, variant: "standard", era: fallbackEra, team: 1, live: true };
+  }
   if (s && live.value) {
     return {
       level: s.battle.level!, variant: s.battle.variant ?? p.variant, era: s.battle.era ?? fallbackEra,
@@ -133,6 +140,9 @@ export function start() {
     .catch((e) => (loadError.value = `The map data could not be loaded (${e.message}).`));
   packJson<Manifest>("manifest.json").then((m) => (manifest.value = m)).catch(() => {});
   subscribe((s) => (snapshot.value = s));
+  (window as any).__TAURI__?.event?.listen("data-updated", (event: { payload: string }) => {
+    notice.value = `New map data for game version ${event.payload} is ready. Restart the app to use it.`;
+  });
 
   // Load the level file whenever the shown map changes.
   let loading = "";
@@ -140,6 +150,21 @@ export function start() {
     const id = view.value.level;
     const c = core.value;
     if (!c || !id || loading === id) return;
+    if (id === UNKNOWN_MAP) {
+      const bounds = snapshot.peek()?.bounds;
+      if (!bounds) return;
+      loading = id;
+      selected.value = null;
+      const empty = { id: "standard", mission: "", mirror: false, sites: [], supply_links: [], armor_links: [], mobile: [], bombers: [], escalation: [] };
+      const blank: Level = { id, level: id, name: "Unknown map", bounds, water: 0, variants: [empty] };
+      level.value = blank;
+      command<number[]>("map_image")
+        .then((bytes) => {
+          if (loading === id) level.value = { ...blank, image_url: URL.createObjectURL(new Blob([new Uint8Array(bytes)])) };
+        })
+        .catch(() => {});
+      return;
+    }
     const ref = c.levels.find((l) => l.id === id);
     if (!ref) return;
     loading = id;

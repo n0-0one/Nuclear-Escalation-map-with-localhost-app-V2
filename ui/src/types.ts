@@ -34,10 +34,10 @@ export interface Variant {
 }
 export interface Level {
   id: string; level: string; name: string; bounds: [number, number, number, number]; water: number;
-  grid_step?: [number, number]; variants: Variant[]; image?: string; roads?: string;
+  grid_step?: [number, number]; variants: Variant[]; image?: string; image_url?: string; roads?: string;
   terrain?: { image: string; w: number; h: number; min_m: number; step_m: number; water: number };
 }
-export interface Manifest { game_version: string; generated: string; datamine: { repository: string; commit: string } }
+export interface Manifest { game_version: string; generated: string; datamine: { repository: string; commit: string }; pending_game_changes?: string[] }
 
 export type Conf = "none" | "guess" | "likely" | "confirmed" | "manual";
 export type Status = "unknown" | "alive" | "destroyed";

@@ -4,9 +4,16 @@
 //! of the installed app.
 //!
 //!   ntl-dev [--data data] [--ui ui/dist] [--port 8777] [--game URL]
+//!           [--serve-sim LEVEL] [--sim-speed N]
+//!
+//! `--serve-sim` makes this server answer the game's own pages under `/sim`,
+//! so a second instance started with `--game http://127.0.0.1:PORT/sim`
+//! exercises the real HTTP path to the "game".
 
 use ntl_engine::host::Host;
+use ntl_engine::sim::Sim;
 use ntl_engine::Pack;
+use std::sync::Mutex;
 use std::io::Read;
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
@@ -50,7 +57,22 @@ fn main() {
         eprintln!("Cannot load the data pack from {}: {e}", data.display());
         std::process::exit(1);
     }));
-    let host = Host::start(pack, None, Some(std::env::temp_dir().join("ntl-recordings")), game, |_| {});
+    let sim: Option<Arc<Mutex<Sim>>> = std::env::args().any(|a| a == "--serve-sim").then(|| {
+        let level = pack.levels.iter().position(|l| l.id == arg("--serve-sim", "")).unwrap_or(0);
+        let speed: f64 = arg("--sim-speed", "1").parse().unwrap_or(1.0);
+        let sim = Arc::new(Mutex::new(Sim::new(pack.clone(), level, 0, pack.core.eras.len() - 1, 1, 11)));
+        let stepping = sim.clone();
+        std::thread::spawn(move || loop {
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            let mut left = 0.1 * speed;
+            while left > 0.0 {
+                stepping.lock().unwrap().step(left.min(0.4));
+                left -= 0.4;
+            }
+        });
+        sim
+    });
+    let host = Host::start(pack.clone(), None, Some(std::env::temp_dir().join("ntl-recordings")), game, |_| {});
     let server = Server::http(format!("127.0.0.1:{port}")).expect("port is free");
     println!("Nuclear Thunder Live development server: http://127.0.0.1:{port}");
 
@@ -60,6 +82,18 @@ fn main() {
         let path = url.split('?').next().unwrap_or("/").to_string();
         let response = if path == "/api/snapshot" {
             Response::from_string(host.snapshot_json().as_str()).with_header(header("Content-Type", "application/json")).boxed()
+        } else if let (Some(page), Some(sim)) = (path.strip_prefix("/sim"), &sim) {
+            if page == "/map.img" {
+                let level = sim.lock().unwrap().level;
+                let bytes = std::fs::read(data.join("levels").join(format!("{}.webp", pack.levels[level].id))).unwrap_or_default();
+                Response::from_data(bytes).boxed()
+            } else {
+                let page = format!("{page}{}", url.find('?').map_or("", |i| &url[i..]));
+                match sim.lock().unwrap().page(&page) {
+                    Some(text) => Response::from_string(text).with_header(header("Content-Type", "application/json")).boxed(),
+                    None => Response::from_string("{}").with_status_code(404).boxed(),
+                }
+            }
         } else if path == "/api/cmd" && *request.method() == Method::Post {
             let mut body = String::new();
             let _ = request.as_reader().take(1 << 20).read_to_string(&mut body);

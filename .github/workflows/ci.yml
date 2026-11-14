@@ -1,0 +1,112 @@
+name: Build and test
+
+on:
+  push:
+    branches: [main, "claude/**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  engine:
+    name: Engine tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run the engine against simulated battles on every map
+        run: cargo test --release -p ntl-engine --features dev
+      - name: Check the data pipeline code
+        run: python -m py_compile pipeline/*.py
+
+  interface:
+    name: Interface build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - run: npm ci
+        working-directory: ui
+      - run: npm run build
+        working-directory: ui
+
+  windows:
+    name: Windows app
+    runs-on: windows-latest
+    needs: [engine, interface]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - name: Build the interface
+        working-directory: ui
+        run: |
+          npm ci
+          npm run build
+      - name: Use the newest published map data, when there is any
+        shell: bash
+        run: |
+          if git fetch --depth 1 origin data-feed 2>/dev/null; then
+            git checkout FETCH_HEAD -- data
+            echo "Bundling data from the data-feed branch."
+          else
+            echo "No data-feed branch yet; bundling the data in this commit."
+          fi
+      - name: Build the installer
+        working-directory: desktop
+        run: npx --yes @tauri-apps/cli@2 build
+      - name: Start-up check
+        shell: pwsh
+        run: |
+          $env:NTL_DEMO = "archipelago"
+          $app = Start-Process -FilePath "target/release/nuclear-thunder-live.exe" -PassThru
+          Start-Sleep -Seconds 20
+          if ($app.HasExited) { throw "The app exited during start-up (code $($app.ExitCode))." }
+          Stop-Process -Id $app.Id -Force
+          Write-Host "The app started and kept running."
+      - name: Collect the downloads
+        shell: bash
+        run: |
+          mkdir -p out/portable/Nuclear-Thunder-Live
+          cp target/release/bundle/nsis/*.exe "out/Nuclear-Thunder-Live-Setup.exe"
+          cp target/release/nuclear-thunder-live.exe "out/portable/Nuclear-Thunder-Live/Nuclear-Thunder-Live.exe"
+          cp -r data out/portable/Nuclear-Thunder-Live/data
+          cp NOTICE.md README.md out/portable/Nuclear-Thunder-Live/
+          (cd out/portable && 7z a -tzip ../Nuclear-Thunder-Live-Portable.zip Nuclear-Thunder-Live > /dev/null)
+          (cd out && sha256sum Nuclear-Thunder-Live-Setup.exe Nuclear-Thunder-Live-Portable.zip > SHA256SUMS.txt && cat SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nuclear-thunder-live-windows
+          path: |
+            out/Nuclear-Thunder-Live-Setup.exe
+            out/Nuclear-Thunder-Live-Portable.zip
+            out/SHA256SUMS.txt
+          if-no-files-found: error
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            out/Nuclear-Thunder-Live-Setup.exe
+            out/Nuclear-Thunder-Live-Portable.zip
+            out/SHA256SUMS.txt

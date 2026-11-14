@@ -200,6 +200,11 @@ export function Rail() {
             <p>Want to see everything working without the game? Start the demo battle from Settings.</p>
           </div>
         )}
+        {live && s.unknown_map && (
+          <p class="hint">
+            This map is not in the app's data yet, so only what the game shows live is drawn. Check for new map data in Settings.
+          </p>
+        )}
         {live && tab === "strike" && <Strike s={s} v={v} />}
         {live && tab === "defence" && <Defence s={s} v={v} />}
         {live && tab === "convoys" && <Convoys s={s} v={v} />}

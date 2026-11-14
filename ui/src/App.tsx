@@ -1,7 +1,7 @@
 import { signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
 import { MapView } from "./map/MapView";
-import { level, loadError, prefs, snapshot } from "./store";
+import { level, loadError, manifest, notice, prefs, snapshot } from "./store";
 import { Layers, SettingsDialog, SitePanel } from "./ui/Panels";
 import { Rail } from "./ui/Rail";
 import { closeMenus, TopBar } from "./ui/TopBar";
@@ -70,6 +70,11 @@ export function App() {
           )}
         </div>
         {loadError.value && <div class="error">{loadError.value}</div>}
+        {!loadError.value && (notice.value || (manifest.value?.pending_game_changes?.length ?? 0) > 0) && (
+          <div class="notice">
+            {notice.value ?? "The game's event files changed after this map data was built. Positions may be out of date until the next data update."}
+          </div>
+        )}
       </main>
       <Rail />
       <SettingsDialog />

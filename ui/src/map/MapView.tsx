@@ -12,14 +12,14 @@ import { COLOR, drawChevron, drawSite, isMinor, label, rgba, sideColor } from ".
 interface Camera { x: number; z: number; ppm: number }
 
 /** Darkened map picture plus smaller copies for sharp zoomed-out drawing. */
-interface Artwork { id: string; mips: (ImageBitmap | HTMLCanvasElement)[] }
+interface Artwork { id: string; src: string; mips: (ImageBitmap | HTMLCanvasElement)[] }
 
 async function loadArtwork(l: Level): Promise<Artwork | null> {
-  if (!l.image) return null;
+  if (!l.image && !l.image_url) return null;
   const image = new Image();
   image.decoding = "async";
   image.crossOrigin = "anonymous";
-  image.src = packUrl(`levels/${l.image}`);
+  image.src = l.image_url ?? packUrl(`levels/${l.image}`);
   await image.decode();
   const mips: HTMLCanvasElement[] = [];
   let size = image.naturalWidth;
@@ -36,7 +36,7 @@ async function loadArtwork(l: Level): Promise<Artwork | null> {
     source = canvas;
     size = Math.floor(size / 2);
   }
-  return { id: l.id, mips };
+  return { id: l.id, src: l.image_url ?? l.image ?? "", mips };
 }
 
 export function reachOf(unitId: string): number {
@@ -58,7 +58,7 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
     const cam: Camera = { x: 0, z: 0, ppm: 0.004 };
     let width = 1, height = 1, dpr = 1;
     let art: Artwork | null = null;
-    let fitted = "";
+    let fitted = "", loadingArt = "";
     let baseDirty = true, liveDirty = true, frame = 0;
     let measure: { a: [number, number]; b: [number, number] } | null = null;
     let measuring = false;
@@ -619,8 +619,11 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
           fitted = `${l.id}:${view.value.variant}`;
           fit(l);
           clamp();
-          if (art?.id !== l.id) {
-            art = null;
+        }
+        if (l && (art?.id !== l.id || art.src !== (l.image_url ?? l.image ?? "")) && loadingArt !== `${l.id}:${l.image_url ?? l.image}`) {
+          {
+            loadingArt = `${l.id}:${l.image_url ?? l.image}`;
+            if (art?.id !== l.id) art = null;
             loadArtwork(l).then((a) => {
               if (level.value?.id === l.id) {
                 art = a;

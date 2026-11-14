@@ -7,12 +7,13 @@
  },
  "terrain_source": {
   "repository": "majorlier/nuclear-thunder-interactive-map",
-  "commit": "b785602"
+  "commit": "b785602ef41d846ee0f365a1f96755949d8d6621"
  },
+ "pending_game_changes": [],
  "files": {
   "core.json": {
-   "sha256": "0f907c054397d91433637c4ac32fa8d46ec17081e1a6e6cb90a47b9206fe67d5",
-   "bytes": 243264
+   "sha256": "585df00fda62736a836c1a146f82f776d47caadfb8ad1ae45e7274400a1982d1",
+   "bytes": 243193
   },
   "levels/archipelago.height.json": {
    "sha256": "d8625879a490666c018ba6c9c8146cf2389754b3f2a40de012836a2ec797f20a",
@@ -23,7 +24,7 @@
    "bytes": 2804658
   },
   "levels/archipelago.json": {
-   "sha256": "132fd126090ad58255c16f44d4dc8b4982955b5b22374058f2c3907b61bbcf86",
+   "sha256": "1e0c921d603dac84f2be15d6da93be245fcc8ef7728bd356fa632799ef2e3f56",
    "bytes": 277729
   },
   "levels/archipelago.roads.json": {
@@ -43,7 +44,7 @@
    "bytes": 3237768
   },
   "levels/kamchatka.json": {
-   "sha256": "1e7f33bac2ab955597ee3649e354e62214e8cea4ac19fc35cd6a35ad35b07d8a",
+   "sha256": "7dc8352af9d28fe61ed59f66a01c91311464779104b1ff9ef2ebbf13aac5d98f",
    "bytes": 262640
   },
   "levels/kamchatka.roads.json": {
@@ -63,7 +64,7 @@
    "bytes": 1144582
   },
   "levels/south_eastern_city.json": {
-   "sha256": "eda833f744d346e1ed1cad771198c3cf8a67848302c7ab8b1a96539fb09c597a",
+   "sha256": "7b487a643613bd54d52b800d857834860713634bd9656e19341a35e0c4eef027",
    "bytes": 251675
   },
   "levels/south_eastern_city.roads.json": {
@@ -365,5 +366,5 @@
    "sha": "fccf2ec3869903cc218ed416f48847ce889ac873"
   }
  ],
- "generated": "2026-11-13T21:17:29Z"
+ "generated": "2026-11-14T00:05:49Z"
 }

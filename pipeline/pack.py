@@ -40,7 +40,7 @@ def load(path: Path):
 
 def dump(path: Path, value) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    path.write_text(json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True), encoding="utf-8")
 
 
 def r1(value: float) -> float:
@@ -386,6 +386,7 @@ def main() -> int:
     parser.add_argument("--assets", type=Path)
     parser.add_argument("--assets-commit", default="")
     parser.add_argument("--out", type=Path, default=HERE.parent / "data")
+    parser.add_argument("--pending", default="[]", help="JSON list of event files that changed after extraction")
     args = parser.parse_args()
 
     config = load(HERE / "config.json")
@@ -583,6 +584,7 @@ def main() -> int:
             "repository": config["terrain_source"]["repository"],
             "commit": args.assets_commit or previous.get("terrain_source", {}).get("commit", ""),
         },
+        "pending_game_changes": json.loads(args.pending),
         "files": files,
         "sources": sorted(sources, key=lambda item: item["path"]),
     }

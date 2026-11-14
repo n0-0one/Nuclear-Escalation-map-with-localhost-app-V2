@@ -196,7 +196,7 @@ def kill_verbs(dm: Datamine) -> dict[str, list[str]]:
                     verb = max(pieces, key=len, default="")
                     if len(verb) >= 2:
                         found[kind].add(verb)
-    return {kind: sorted(verbs, key=len, reverse=True) for kind, verbs in found.items()}
+    return {kind: sorted(verbs, key=lambda verb: (-len(verb), verb)) for kind, verbs in found.items()}
 
 
 def nuclear_weapons(dm: Datamine, hints: list[str]) -> list[dict]:

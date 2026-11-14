@@ -1,0 +1,66 @@
+name: Refresh map data
+
+# Checks the public War Thunder datamine every day. When the event's data
+# changed, rebuilds the data pack, proves the engine still works with it and
+# publishes it. Installed apps pick it up by themselves.
+
+on:
+  schedule:
+    - cron: "41 4 * * *"
+  workflow_dispatch:
+    inputs:
+      assets:
+        description: "Also rebuild map pictures, terrain and roads"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pillow
+      - name: Rebuild the data pack
+        run: python pipeline/update.py ${{ inputs.assets && '--assets' || '' }}
+      - name: Stop here when nothing changed
+        id: diff
+        run: |
+          if git diff --quiet -- data; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Map data is already current." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --stat -- data >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: dtolnay/rust-toolchain@stable
+        if: steps.diff.outputs.changed == 'true'
+      - uses: Swatinem/rust-cache@v2
+        if: steps.diff.outputs.changed == 'true'
+      - name: Prove the engine works with the new data
+        if: steps.diff.outputs.changed == 'true'
+        run: cargo test --release -p ntl-engine
+      - name: Publish
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          version=$(python -c "import json; print(json.load(open('data/manifest.json'))['game_version'])")
+          git add data
+          git commit -m "Update map data for game version ${version}"
+          git push origin HEAD:main
+          # The feed installed apps read: just the data folder, one commit.
+          git checkout --orphan feed
+          git rm -r --cached . > /dev/null
+          git add data
+          git commit -m "Map data for game version ${version}" > /dev/null
+          git push --force origin feed:data-feed
