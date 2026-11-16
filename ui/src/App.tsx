@@ -2,7 +2,9 @@ import { signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
 import { MapView } from "./map/MapView";
 import { level, loadError, notice, prefs, snapshot } from "./store";
-import { Bar, openPopover } from "./ui/Bar";
+import { Bar, openPopover, ThreatChip } from "./ui/Bar";
+import { startUpdateChecks } from "./ui/updates";
+import { FILTERS, pickFilter, selected, setPref } from "./store";
 import { SettingsDialog } from "./ui/Settings";
 import { HoverCard, Sidebar } from "./ui/Sidebar";
 
@@ -48,14 +50,40 @@ function useAlertTone() {
   }, []);
 }
 
+/** Keys: F follow me, Esc close, 1-9 filters, 0 all, E enemy only, P side panel. */
+function useShortcuts() {
+  useEffect(() => {
+    startUpdateChecks();
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement;
+      if (target.closest("input, textarea, select") || event.altKey || event.ctrlKey || event.metaKey) return;
+      const key = event.key.toLowerCase();
+      if (key === "escape") {
+        if (openPopover.value) openPopover.value = null;
+        else selected.value = null;
+      } else if (key === "f") setPref({ follow: !prefs.value.follow });
+      else if (key === "e") setPref({ enemyOnly: !prefs.value.enemyOnly });
+      else if (key === "p") setPref({ rail: !prefs.value.rail });
+      else if (key === "0") pickFilter(null, false);
+      else if (/^[1-9]$/.test(key) && FILTERS[Number(key) - 1]) pickFilter(FILTERS[Number(key) - 1].id, event.shiftKey);
+      else return;
+      event.preventDefault();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+}
+
 export function App() {
   useAlertTone();
+  useShortcuts();
   const position = cursor.value;
   const player = snapshot.value?.player;
   return (
     <div class="app" onPointerDownCapture={(e) => !(e.target as HTMLElement).closest(".anchor") && openPopover.value && (openPopover.value = null)}>
       <MapView onCursor={(world) => (cursor.value = world)} />
       <Bar />
+      <ThreatChip />
       <Sidebar />
       <HoverCard />
       <div class="readout material">

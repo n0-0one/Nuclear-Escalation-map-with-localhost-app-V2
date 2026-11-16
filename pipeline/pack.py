@@ -401,6 +401,7 @@ def pack_unit_art(units: dict[str, dict], specs: dict, source: Path | None, dm: 
     if folder and folder.exists():
         portraits = {path.stem.lower(): path for path in folder.glob("*.png")}
     icons = {path.rsplit("/", 1)[-1][:-4].lower(): path for path in dm.ls("atlases.vromfs.bin_u/units") if path.endswith(".png")}
+    import io
 
     def save(image, target: Path) -> None:
         image = image.convert("RGBA")
@@ -410,6 +411,14 @@ def pack_unit_art(units: dict[str, dict], specs: dict, source: Path | None, dm: 
     for unit_id, unit in units.items():
         base = unit_id.rsplit("/", 1)[-1].lower()
         model = unit["model"].lower()
+        # the small tech-tree picture the game shows for the vehicle
+        slot_key = next((key for key in (base, base.removesuffix("_ai"), base.removesuffix("_ec"), model) if key in icons), None)
+        if slot_key:
+            slot_file = out / f"slot_{slot_key}.webp"
+            if not slot_file.exists():
+                with Image.open(io.BytesIO(dm.read(icons[slot_key]))) as image:
+                    image.convert("RGBA").save(slot_file, "WEBP", quality=85, method=6)
+            unit["slot"] = f"slot_{slot_key}"
         stem = model or base
         target = out / f"{stem}.webp"
         if not target.exists():
@@ -419,8 +428,6 @@ def pack_unit_art(units: dict[str, dict], specs: dict, source: Path | None, dm: 
                 with Image.open(portrait) as image:
                     save(image, target)
             elif icon:
-                import io
-
                 with Image.open(io.BytesIO(dm.read(icon))) as image:
                     save(image, target)
         if target.exists():
@@ -590,6 +597,15 @@ def main() -> int:
         for unit_id in sorted(unit_ids)
     }
     pack_unit_art(units, specs, args.assets, dm, out / "units")
+    roles: dict[str, str] = {}
+    for level in levels_index:
+        for variant in load(out / level["file"])["variants"]:
+            for site in variant["sites"]:
+                for placement in site["units"]:
+                    roles.setdefault(placement["u"], placement.get("r", ""))
+    for unit_id, unit in units.items():
+        unit["it"] = extras.unit_icon_type(unit_id, specs.get(unit_id, {"unit_class": unit_id}), roles.get(unit_id, ""))
+    dump(out / "icons.json", extras.map_icons(dm))
 
     def convoy_era_label(key: str) -> list[str]:
         """Match a convoy template key such as ``1970_early`` to era ids by label."""

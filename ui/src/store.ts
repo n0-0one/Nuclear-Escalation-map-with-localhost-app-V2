@@ -36,6 +36,10 @@ interface Prefs {
   /** Hide friendly forces. */
   enemyOnly: boolean;
   sound: boolean; rail: boolean;
+  /** Map symbols: the app's simple ones, or the game's War Thunder, NATO or USSR sets. */
+  iconStyle: "simple" | "wt" | "nato" | "ussr";
+  /** Keep the map centred on the player during a battle. */
+  follow: boolean;
   /** Terrain cover: follow the player's altitude, or use the fixed one. */
   coverLive: boolean; coverAlt: number; coverAgl: boolean;
 }
@@ -43,7 +47,7 @@ const defaults: Prefs = {
   level: "", variant: "standard", era: "", team: 1, tab: "strike",
   layers: { cover: false, rings: true, radar: false, routes: true, grid: true, labels: true, aircraft: true },
   show: [], enemyOnly: false,
-  sound: true, rail: true, coverLive: true, coverAlt: 500, coverAgl: false,
+  sound: true, rail: true, iconStyle: "nato", follow: false, coverLive: true, coverAlt: 500, coverAgl: false,
 };
 function readPrefs(): Prefs {
   try {
@@ -87,6 +91,8 @@ export function pickFilter(id: string | null, additive: boolean) {
 /** Selected site index in the current variant. */
 export const selected = signal<number | null>(null);
 export const hovered = signal<number | null>(null);
+/** A single vehicle under the pointer (at close zoom): site index and slot. */
+export const hoveredUnit = signal<{ site: number; slot: number } | null>(null);
 /** Where the pointer is while hovering a site, in window pixels. */
 export const hoverAt = signal<{ x: number; y: number } | null>(null);
 /** Ask the map to centre on a world position. */

@@ -6,6 +6,7 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod appupdate;
 mod update;
 
 use ntl_engine::host::Host;
@@ -65,7 +66,7 @@ fn engine(state: tauri::State<'_, App>, cmd: String, args: Value) -> Result<Valu
 
 #[tauri::command]
 fn app_info(state: tauri::State<'_, App>) -> Value {
-    json!({ "version": env!("CARGO_PKG_VERSION"), "pack_source": state.pack_source })
+    json!({ "version": env!("CARGO_PKG_VERSION"), "pack_source": state.pack_source, "portable": appupdate::is_portable() })
 }
 
 fn run_update(pack_dir: &Path, data_root: &Path) -> Result<String, String> {
@@ -82,6 +83,30 @@ async fn update_data(state: tauri::State<'_, App>) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || run_update(&pack_dir, &data_root))
         .await
         .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn app_update_check(window: tauri::WebviewWindow) -> Result<appupdate::Check, String> {
+    if window.label() != "main" {
+        return Err("Only the main window checks for updates.".into());
+    }
+    tauri::async_runtime::spawn_blocking(appupdate::check).await.map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn app_update_install(window: tauri::WebviewWindow, app: tauri::AppHandle) -> Result<String, String> {
+    if window.label() != "main" {
+        return Err("Only the main window installs updates.".into());
+    }
+    let (message, close) = tauri::async_runtime::spawn_blocking(appupdate::install).await.map_err(|e| e.to_string())??;
+    if close {
+        // Give the window a moment to show the message, then make way for the installer.
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(1200));
+            app.exit(0);
+        });
+    }
+    Ok(message)
 }
 
 /// Shows, hides or (un)locks the mini map window. Only the main window may ask.
@@ -189,7 +214,7 @@ fn main() {
                 window.app_handle().exit(0);
             }
         })
-        .invoke_handler(tauri::generate_handler![engine, app_info, update_data, overlay])
+        .invoke_handler(tauri::generate_handler![engine, app_info, update_data, overlay, app_update_check, app_update_install])
         .run(tauri::generate_context!())
         .expect("the app window could not be created");
 }

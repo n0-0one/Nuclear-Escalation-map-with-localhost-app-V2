@@ -53,13 +53,13 @@ fn safe_relative(path: &str) -> Option<PathBuf> {
     (plain && tame && !path.is_empty() && path.len() < 200).then(|| candidate.to_path_buf())
 }
 
-fn agent() -> Result<ureq::Agent, String> {
+pub fn agent() -> Result<ureq::Agent, String> {
     let tls = native_tls::TlsConnector::new().map_err(|e| e.to_string())?;
     Ok(ureq::AgentBuilder::new()
         .tls_connector(Arc::new(tls))
         .timeout_connect(Duration::from_secs(8))
         .timeout_read(Duration::from_secs(30))
-        .redirects(2)
+        .redirects(4)
         .user_agent("nuclear-thunder-live")
         .build())
 }

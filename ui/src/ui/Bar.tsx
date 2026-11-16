@@ -4,6 +4,9 @@
 import { signal } from "@preact/signals";
 import { applySettings, core, FILTERS, isLive, pickFilter, prefs, setPref, snapshot, toggleLayer, view, level } from "../store";
 import { coverStats, terrainReady } from "../map/cover";
+import { variant, siteName } from "../store";
+import { km } from "./format";
+import { appUpdate, installUpdate } from "./updates";
 import { br, clock } from "./format";
 import { Icon, TEAM_NAME } from "./shared";
 
@@ -130,6 +133,8 @@ const OVERLAYS: [string, string, string][] = [
   ["grid", "Grid", "Grid squares, as in the game"],
 ];
 
+const STYLES: [string, string][] = [["nato", "NATO"], ["ussr", "USSR"], ["wt", "War Thunder"], ["simple", "Simple"]];
+
 function LayersPopover() {
   const p = prefs.value, layers = p.layers;
   const hasTerrain = !!level.value?.terrain;
@@ -138,6 +143,13 @@ function LayersPopover() {
   const stats = coverStats.value;
   return (
     <div class="popover layers-pop material right">
+      <h4>Map symbols</h4>
+      <div class="seg styles">
+        {STYLES.map(([id, text]) => (
+          <button key={id} class={p.iconStyle === id ? "on" : ""} onClick={() => setPref({ iconStyle: id as typeof p.iconStyle })}>{text}</button>
+        ))}
+      </div>
+      <h4>Overlays</h4>
       {OVERLAYS.filter(([key]) => key !== "cover" || hasTerrain).map(([key, text, hint]) => (
         <button key={key} class="switch-row" onClick={() => toggleLayer(key)} aria-pressed={!!layers[key]}>
           <span>
@@ -177,13 +189,46 @@ function LayersPopover() {
   );
 }
 
+/** A red chip while the player is inside an enemy air-defence site's reach. */
+function ThreatChip() {
+  const s = snapshot.value, v = variant.value;
+  if (!s || !v || !isLive.value) return null;
+  const threats = s.cues.filter((cue) => cue.inside);
+  if (!threats.length) return null;
+  const nearest = threats[0];
+  return (
+    <div class="threat material">
+      <i />
+      Inside the reach of {siteName(v.sites[nearest.site])} · {km(nearest.dist_m)}
+      {threats.length > 1 ? ` and ${threats.length - 1} more` : ""}
+    </div>
+  );
+}
+
+function UpdateChip() {
+  const update = appUpdate.value;
+  if (!update?.newer) return null;
+  return (
+    <button class="update material" onClick={installUpdate} disabled={update.busy}>
+      {Icon.download}
+      {update.busy ? update.progress ?? "Downloading…" : `Update to ${update.latest}`}
+    </button>
+  );
+}
+
+export { ThreatChip };
 export function Bar() {
   const s = snapshot.value;
+  const live = isLive.value && !!s?.player;
   return (
     <div class="bar">
       <BattleCapsule />
       <FilterPills />
       <div class="tools">
+        <UpdateChip />
+        {live && (
+          <button class={`tool material ${prefs.value.follow ? "open active" : ""}`} title="Follow me (F)" onClick={() => setPref({ follow: !prefs.value.follow })}>{Icon.follow}</button>
+        )}
         {s?.recording && <span class="rec material">Recording</span>}
         <div class="anchor">
           <button class={`tool material ${openPopover.value === "layers" ? "open" : ""}`} title="Overlays" onClick={() => toggle("layers")}>{Icon.layers}</button>

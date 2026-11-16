@@ -16,7 +16,7 @@ It reads what the game itself reports while you play and turns it into a plannin
 | **Points out strike targets** | When a column drives next to a depot or strongpoint, that area lights up softly on the map and in the mini map, with a countdown before it happens. |
 | **Shows where you are hidden** | Terrain cover: the parts of the map where enemy air defence can actually see you at your current altitude, with hills and mountains blocking the rest. |
 | **Lists the nearest SAM sites** | Numbered 1-10 with distance, bearing and grid square, nearest first, so you can drop the game's aiming points on them quickly. |
-| **Stays current** | Map data is rebuilt automatically from the public War Thunder datamine after game updates and downloaded by the app. No reinstall needed. |
+| **Stays current** | Map data is rebuilt automatically from the public War Thunder datamine after game updates and downloaded by the app. New app versions install from inside the app. |
 | **Works without the game** | Study any map, side and BR bracket offline, or run the built-in demo battle. |
 
 ## Install
@@ -31,11 +31,18 @@ Windows may show a "Windows protected your PC" notice because the installer is n
 
 - **Top left** - the battle: connection state, map, your team and BR bracket. The app works these out by itself. Click it to change any of them, or to read how it decided. If it says *check side*, pick your team there.
 - **Filter row** - click **SAM sites** (or any other group) to see only that. Click **All** to see everything again. Hold Ctrl while clicking to combine groups. **Enemy only** hides your own side.
-- **Map** - drag to move, scroll to zoom, Shift-drag to measure. Diamonds are enemy sites, rectangles are friendly. **Hover a site** to see its vehicles with pictures and how many are destroyed; click it for full details.
+- **Map** - drag to move, scroll to zoom, Shift-drag to measure. **Hover a site** to see its vehicles with pictures and how many are destroyed; click it for full details. **Zoom in** and every vehicle is drawn on its own: hover one for its picture, weapon, reach and status.
+- **Map symbols** - the layers button (top right) switches between NATO, USSR and War Thunder symbols, all taken from the game, or the app's own simple ones.
 - **Destroyed units** - a destroyed site gets a red cross, a damaged one a badge such as `2/3`. The *Air defence* tab lists everything that has been knocked out.
 - **Your marks** - your point of interest is drawn as a large cyan crosshair with its distance, and aiming points as numbered yellow rings, when the game reports them.
 - **Side panel** - *Strike* (alerts and best targets), *Air defence* (the ten nearest live SAM sites), *Convoys* and *Log*.
-- **Top right** - overlays (weapon reach, terrain cover, radar reach, names, grid), the side panel switch and Settings.
+- **Top right** - *follow me* (keeps you in the middle of the map), map symbols and overlays (weapon reach, terrain cover, radar reach, names, grid), the side panel switch and Settings.
+- **Warnings** - a red bar appears while you are inside the reach of an enemy SAM site, and destroyed air defence that will come back shows a countdown on the map.
+- **Keys** - `F` follow me, `1`-`9` filters (`Shift` to combine), `0` show all, `E` enemy only, `P` side panel, `Esc` close.
+
+### Updates
+
+The app checks for new versions by itself. When one is out, a blue **Update** button appears at the top right (and in Settings): click it, the installer opens and the app closes. The installer is checked against the checksum published with the release before it is started. Copies from the portable ZIP open the download page instead.
 
 For the mini map window to stay on top of the game, run War Thunder in **borderless** or **windowed** mode.
 

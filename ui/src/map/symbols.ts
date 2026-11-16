@@ -119,39 +119,22 @@ function glyph(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, c
   }
 }
 
-export function drawSite(ctx: CanvasRenderingContext2D, x: number, y: number, o: SymbolOptions) {
-  const r = o.size;
-  const color = sideColor(o.enemy);
-  const faded = o.destroyed ? 0.38 : 1;
-
+/** Selection ring, destroyed cross and losses badge, drawn around any site symbol. */
+export function drawSiteMarks(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, o: SymbolOptions) {
   if (o.selected || o.hovered) {
     ctx.beginPath();
     ctx.arc(x, y, r + 7, 0, Math.PI * 2);
-    ctx.strokeStyle = o.selected ? COLOR.amber : rgba(COLOR.ink, 0.55);
-    ctx.lineWidth = o.selected ? 2 : 1;
+    ctx.strokeStyle = o.selected ? COLOR.amber : rgba(COLOR.ink, 0.6);
+    ctx.lineWidth = o.selected ? 2.25 : 1.25;
     ctx.stroke();
   }
-
-  frame(ctx, x, y, r, o.enemy);
-  ctx.fillStyle = rgba(COLOR.panel, o.destroyed ? 0.6 : 0.9);
-  ctx.fill();
-  ctx.strokeStyle = o.destroyed ? rgba(COLOR.dim, 0.8) : rgba(color, faded);
-  ctx.lineWidth = o.seen ? 2.25 : 1.5;
-  ctx.stroke();
-
-  ctx.strokeStyle = ctx.fillStyle = rgba(COLOR.ink, o.destroyed ? 0.35 : 0.95);
-  ctx.lineWidth = 1.4;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  glyph(ctx, x, y, r, o.cat);
-
   if (o.destroyed) {
     // a clear red cross: this site is out of the fight
     ctx.beginPath();
-    ctx.moveTo(x - r * 0.8, y - r * 0.8);
-    ctx.lineTo(x + r * 0.8, y + r * 0.8);
-    ctx.moveTo(x + r * 0.8, y - r * 0.8);
-    ctx.lineTo(x - r * 0.8, y + r * 0.8);
+    ctx.moveTo(x - r * 0.85, y - r * 0.85);
+    ctx.lineTo(x + r * 0.85, y + r * 0.85);
+    ctx.moveTo(x + r * 0.85, y - r * 0.85);
+    ctx.lineTo(x - r * 0.85, y + r * 0.85);
     ctx.strokeStyle = rgba(COLOR.panel, 0.9);
     ctx.lineWidth = 5;
     ctx.stroke();
@@ -174,6 +157,46 @@ export function drawSite(ctx: CanvasRenderingContext2D, x: number, y: number, o:
     ctx.textBaseline = "middle";
     ctx.fillText(text, left + 4, top + 8);
   }
+}
+
+/** The app's own simple symbols: frame shape shows the side, a glyph the kind. */
+export function drawSite(ctx: CanvasRenderingContext2D, x: number, y: number, o: SymbolOptions) {
+  const r = o.size;
+  const color = sideColor(o.enemy);
+  frame(ctx, x, y, r, o.enemy);
+  ctx.fillStyle = rgba(COLOR.panel, o.destroyed ? 0.6 : 0.9);
+  ctx.fill();
+  ctx.strokeStyle = o.destroyed ? rgba(COLOR.dim, 0.8) : color;
+  ctx.lineWidth = o.seen ? 2.25 : 1.5;
+  ctx.stroke();
+  ctx.strokeStyle = ctx.fillStyle = rgba(COLOR.ink, o.destroyed ? 0.35 : 0.95);
+  ctx.lineWidth = 1.4;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  glyph(ctx, x, y, r, o.cat);
+  drawSiteMarks(ctx, x, y, r, o);
+}
+
+/** An airfield as a runway bar along its longest runway. */
+export function drawRunwayMark(ctx: CanvasRenderingContext2D, x: number, y: number, angle: number, enemy: boolean, destroyed: boolean) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.beginPath();
+  ctx.roundRect(-17, -5, 34, 10, 3);
+  ctx.fillStyle = destroyed ? COLOR.dim : enemy ? "#ff8a80" : "#7cc4ff";
+  ctx.fill();
+  ctx.strokeStyle = rgba("#000000", 0.6);
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.moveTo(-12, 0);
+  ctx.lineTo(12, 0);
+  ctx.strokeStyle = rgba("#000000", 0.7);
+  ctx.lineWidth = 1.25;
+  ctx.stroke();
+  ctx.restore();
 }
 
 /** Arrow-head marker for things that move. */

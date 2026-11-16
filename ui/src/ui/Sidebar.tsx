@@ -2,10 +2,10 @@
 // or the details of the site you clicked.
 
 import { command } from "../transport";
-import { core, enemyTeam, focusOn, hoverAt, hovered, isLive, prefs, selected, setPref, siteName, siteStates, snapshot, variant } from "../store";
+import { core, enemyTeam, eraIndex, focusOn, hoverAt, hovered, hoveredUnit, isLive, prefs, selected, setPref, siteName, siteStates, snapshot, variant } from "../store";
 import type { Alert, Convoy, Cue, Snapshot, Variant } from "../types";
 import { bearing, clock, km, oclock, weaponLabel } from "./format";
-import { Icon, TEAM_NAME, UnitPicture, unitGroups } from "./shared";
+import { Icon, MapSymbol, TEAM_NAME, UnitPicture, unitGroups } from "./shared";
 
 const TABS = [["strike", "Strike"], ["defence", "Air defence"], ["convoys", "Convoys"], ["log", "Log"]] as const;
 
@@ -193,7 +193,7 @@ function SiteDetail({ index, v }: { index: number; v: Variant }) {
           const weapon = g.spec?.w?.[0];
           return (
             <div class={`vehicle ${dead ? "dead" : ""}`} key={g.id}>
-              <UnitPicture spec={g.spec} dead={dead} />
+              <UnitPicture spec={g.spec} dead={dead} enemy={enemy} />
               <div class="v-main">
                 <b>{g.name}{g.total > 1 ? ` × ${g.total}` : ""}</b>
                 {weapon && <span>{weaponLabel(weapon.n)}{weapon.max ? ` · ${km(weapon.max)}` : ""}</span>}
@@ -271,9 +271,61 @@ export function Sidebar() {
   );
 }
 
+const ROLE_TEXT: Record<string, string> = {
+  launcher: "Missile launcher", tracker_radar: "Tracking radar", detector_radar: "Search radar", radar: "Radar",
+  spaa: "Anti-aircraft", vehicle: "Vehicle", ship: "Ship",
+};
+
+/** One vehicle under the pointer, at close zoom. */
+function UnitHoverCard({ siteIndex, slot, at, v }: { siteIndex: number; slot: number; at: { x: number; y: number }; v: Variant }) {
+  const site = v.sites[siteIndex];
+  const placement = site?.units[slot];
+  const c = core.value;
+  if (!placement || !c) return null;
+  const spec = c.units[placement.u];
+  const enemy = site.team === enemyTeam.value;
+  const unit = isLive.value ? siteStates.value.get(siteIndex)?.units.get(slot) : undefined;
+  const dead = unit?.[0] === "destroyed";
+  const player = isLive.value ? snapshot.value?.player : null;
+  const reach = spec?.eng ?? spec?.ai_eng ?? placement.tr ?? 0;
+  const weapon = spec?.w?.[0];
+  const status = !unit
+    ? null
+    : dead
+      ? unit[1] === "likely" ? "Probably destroyed" : unit[1] === "manual" ? "Destroyed (marked by you)" : "Destroyed"
+      : unit[2] ? "On the map now" : "Seen earlier";
+  const width = 300;
+  const left = at.x + 18 + width > window.innerWidth ? at.x - width - 18 : at.x + 18;
+  const top = Math.max(8, Math.min(at.y - 20, window.innerHeight - 220));
+  void eraIndex.value;
+  return (
+    <div class="hover unit-hover material" style={{ left: `${left}px`, top: `${top}px`, width: `${width}px` }}>
+      <div class="unit-hover-head">
+        <UnitPicture spec={spec} dead={dead} enemy={enemy} />
+        <div class="unit-hover-text">
+          <b class="hover-title">{(spec?.s ?? spec?.n ?? placement.u).replace(/"/g, "")}</b>
+          <span class="hover-sub">{ROLE_TEXT[placement.r ?? ""] ?? (placement.r ?? "").replace(/_/g, " ")}</span>
+          {spec?.s && spec.n !== spec.s && <span class="hover-sub dim full-name">{spec.n.replace(/"/g, "")}</span>}
+          <span class="hover-sub dim">{siteName(site)}</span>
+        </div>
+        <MapSymbol type={spec?.it ?? "tank"} enemy={enemy} dead={dead} size={24} />
+      </div>
+      <dl class="facts compact">
+        {weapon && (<><dt>Weapon</dt><dd>{weaponLabel(weapon.n)}</dd></>)}
+        {reach > 0 && (<><dt>Reach</dt><dd>{km(reach)}</dd></>)}
+        {spec?.det && (<><dt>Radar</dt><dd>{km(spec.det)}</dd></>)}
+        {player && (<><dt>From you</dt><dd>{km(Math.hypot(placement.p[0] - player.p[0], placement.p[1] - player.p[1]))} · {bearing((Math.atan2(placement.p[0] - player.p[0], placement.p[1] - player.p[1]) * 180) / Math.PI)}</dd></>)}
+      </dl>
+      {status && <span class={`unit-status ${dead ? "dead" : unit?.[2] ? "seen" : ""}`}>{status}{unit?.[3] != null && dead ? ` · ${unit[3] > 0 ? `may return in ${clock(unit[3])}` : "may be back"}` : ""}</span>}
+    </div>
+  );
+}
+
 /** Follows the pointer while it rests on a site: what is there, at a glance. */
 export function HoverCard() {
   const index = hovered.value, at = hoverAt.value, v = variant.value;
+  const unitHover = hoveredUnit.value;
+  if (unitHover && at && v) return <UnitHoverCard siteIndex={unitHover.site} slot={unitHover.slot} at={at} v={v} />;
   if (index === null || !at || !v || !v.sites[index]) return null;
   const site = v.sites[index];
   const live = isLive.value;
@@ -281,6 +333,7 @@ export function HoverCard() {
   const enemy = site.team === enemyTeam.value;
   const groups = unitGroups(site, index);
   const reach = Math.max(0, ...groups.map((g) => g.spec?.eng ?? g.spec?.ai_eng ?? 0), ...site.units.map((u) => u.tr ?? 0));
+  const player = isLive.value ? snapshot.value?.player : null;
   // keep the card inside the window
   const width = 280, height = 96 + Math.ceil(Math.max(1, groups.length) / 2) * 92;
   const left = at.x + 18 + width > window.innerWidth ? at.x - width - 18 : at.x + 18;
@@ -290,6 +343,7 @@ export function HoverCard() {
       <span class={`tag ${enemy ? "enemy" : "friendly"}`}>{enemy ? "Enemy" : "Friendly"}</span>
       <b class="hover-title">{siteName(site)}</b>
       <span class="hover-sub">
+        {player ? `${km(Math.hypot(site.p[0] - player.p[0], site.p[1] - player.p[1]))} from you · ` : ""}
         {reach > 0 ? `Reach ${km(reach)}` : ""}
         {live && state && state.total > 0 && (
           <em class={state.destroyed ? "dead" : state.alive < state.total ? "hit" : ""}>
@@ -303,7 +357,7 @@ export function HoverCard() {
           const dead = g.destroyed >= g.total;
           return (
             <div class={`tile ${dead ? "dead" : ""}`} key={g.id}>
-              <UnitPicture spec={g.spec} dead={dead} />
+              <UnitPicture spec={g.spec} dead={dead} enemy={enemy} />
               <span class="tile-name">{g.name}</span>
               <span class="tile-count">
                 {g.total > 1 ? `× ${g.total}` : ""}

@@ -7,6 +7,8 @@ export interface Era { id: string; label: string; rank: [number, number]; br: [n
 export interface Weapon { n: string; ammo?: number; min?: number; max?: number; g?: string; rl?: number }
 export interface UnitSpec {
   n: string; s?: string; icon: string; type: string; model: string; img?: string; img_generic?: boolean;
+  /** Map symbol type (sam, tank, truck, ...) and the game's tech-tree picture, if any. */
+  it?: string; slot?: string;
   det?: number; trk?: number; eng?: number; ai_eng?: number; gun?: number; kph?: number; w?: Weapon[];
 }
 export interface LevelRef {

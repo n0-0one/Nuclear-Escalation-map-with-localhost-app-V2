@@ -214,3 +214,66 @@ def nuclear_weapons(dm: Datamine, hints: list[str]) -> list[dict]:
         if isinstance(kilotons, (int, float)) and kilotons > 0:
             weapons.append({"id": stem, "yield_kt": float(kilotons)})
     return sorted(weapons, key=lambda item: (item["yield_kt"], item["id"]))
+
+
+ICON_DIR = "atlases.vromfs.bin_u/gameuiskin"
+
+
+def map_icons(dm: Datamine) -> dict[str, dict[str, str]]:
+    """The game's map symbols in its three styles.
+
+    ``{"wt": {type: svg}, "nato": {"ally_type" | "enemy_type": svg}, "ussr": {type: svg}}``.
+    Each SVG draws its symbol in white (#fdfcff or #fff); the app paints that
+    white in the team colour.
+    """
+    found: dict[str, dict[str, str]] = {"wt": {}, "nato": {}, "ussr": {}}
+    for path in dm.ls(ICON_DIR):
+        name = path.rsplit("/", 1)[-1]
+        if not (name.startswith("def_") and name.endswith("_radar.svg")):
+            continue
+        key = name[len("def_"):-len("_radar.svg")]
+        svg = re.sub(r">\s+<", "><", dm.read_text(path)).strip()
+        svg = re.sub(r"\s{2,}", " ", svg)
+        if not svg.startswith("<svg") or "<script" in svg.lower() or "href" in svg.lower():
+            continue  # only plain drawings are accepted
+        if "xmlns" not in svg[:200]:
+            svg = svg.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"', 1)
+        if key.startswith("nato_"):
+            found["nato"][key[len("nato_"):]] = svg
+        elif key.startswith("ussr_"):
+            found["ussr"][key[len("ussr_"):]] = svg
+        else:
+            found["wt"][key] = svg
+    return found
+
+
+def unit_icon_type(unit_id: str, spec: dict, role: str = "") -> str:
+    """Which map symbol a unit uses, in NATO/USSR terms (sam, tank, truck, ...)."""
+    name, role = unit_id.lower(), role.lower()
+    radar = str(spec.get("on_radar_as") or "").lower()
+    kind = str(spec.get("unit_type") or "").lower()
+    if "aircraftcarrier" in name or "carrier" in radar:
+        return "aircraft_carrier"
+    for word in ("battleship", "missile_cruiser", "heavy_cruiser", "cruiser", "destroyer", "frigate", "corvette"):
+        if word in name or word in radar:
+            return "missile_cruiser" if word == "missile_cruiser" else word
+    if role == "ship" or kind in ("typeship", "typegunboat", "typetorpedogunboat"):
+        return "boat"
+    by_radar = {"sam": "sam", "radar": "radar_station", "tracked": "tank", "ifv": "ifv", "wheeled": "truck",
+                "mlrs": "mlrs", "tbm_launcher": "tbm", "spaa": "spaa", "airdefence": "spaa"}
+    if radar in by_radar:
+        # A radar-guided SPAA vehicle reports as "sam"; keep SAM for launchers only.
+        if radar == "sam" and (role == "spaa" or kind == "typespaa"):
+            return "spaa"
+        return by_radar[radar]
+    by_kind = {"typespaa": "spaa", "typelighttank": "tank", "typemediumtank": "tank", "typeheavytank": "tank",
+               "typetankdestroyer": "tank_destroyer"}
+    if kind in by_kind:
+        return by_kind[kind]
+    if "radar" in role or "radar" in name:
+        return "radar_station"
+    if "launcher" in role or "_sam_" in name:
+        return "sam"
+    if "truck" in name or "carrier" in name or "wheeled" in name:
+        return "truck"
+    return "tank"

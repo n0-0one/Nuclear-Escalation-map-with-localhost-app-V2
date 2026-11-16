@@ -3,6 +3,7 @@ import { command, isDesktop, shell } from "../transport";
 import { applySettings, core, manifest, prefs, setPref, snapshot, view } from "../store";
 import { settingsOpen } from "./Bar";
 import { Icon } from "./shared";
+import { appUpdate, checkForUpdate, installUpdate, updateMessage } from "./updates";
 
 const message = signal("");
 const diagText = signal<string | null>(null);
@@ -143,6 +144,31 @@ export function SettingsDialog() {
               <p class="hint">A small always-on-top window with nearby threats and alerts. Run the game in borderless or windowed mode to see it over the game.</p>
             </>
           )}
+
+          <h3>App</h3>
+          <div class="group">
+            <div class="row-info">
+              <span>
+                <b>Nuclear Thunder Live {appInfo.value?.version ?? appUpdate.value?.current ?? ""}</b>
+                <small>
+                  {appUpdate.value?.newer
+                    ? `Version ${appUpdate.value.latest} is available.`
+                    : appUpdate.value
+                      ? "You have the latest version."
+                      : isDesktop ? "Checks for new versions by itself." : "Running in a browser."}
+                </small>
+              </span>
+              {appUpdate.value?.newer ? (
+                <button class="primary" disabled={appUpdate.value.busy} onClick={installUpdate}>
+                  {appUpdate.value.busy ? appUpdate.value.progress ?? "Working…" : appUpdate.value.portable ? "Download" : "Update now"}
+                </button>
+              ) : (
+                isDesktop && <button onClick={() => checkForUpdate(true)}>Check now</button>
+              )}
+            </div>
+          </div>
+          {updateMessage.value && <p class="hint strong">{updateMessage.value}</p>}
+          {appUpdate.value?.newer && !appUpdate.value.portable && <p class="hint">The installer opens and the app closes. Your settings are kept.</p>}
 
           <h3>Map data</h3>
           <dl class="facts">

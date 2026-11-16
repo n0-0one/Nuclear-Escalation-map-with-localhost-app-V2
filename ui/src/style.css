@@ -278,3 +278,42 @@ b { font-weight: 600; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ------------------------------------------------------- v2.2 additions */
+.symbol { display: block; object-fit: contain; image-rendering: auto; }
+.symbol.wt { image-rendering: pixelated; }
+.pic.small { display: grid; place-items: center; }
+.pic.small img { width: auto; height: auto; max-width: 100%; max-height: 100%; }
+.pic.small img.symbol { width: 30px; height: 30px; }
+.tile .pic.small img:not(.symbol) { max-height: 48px; }
+
+.unit-hover { gap: 6px; }
+.unit-hover-head { display: grid; grid-template-columns: 76px 1fr auto; gap: 10px; align-items: center; }
+.unit-hover-text { display: grid; min-width: 0; }
+.unit-hover-text .hover-title { padding-top: 0; font-size: 15px; line-height: 1.25; }
+.hover-sub.dim { color: var(--ink-3); }
+.facts.compact { padding: 4px 2px 0; font-size: 12.5px; gap: 2px 12px; }
+.unit-status { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.unit-status.dead { color: var(--red); }
+.unit-status.seen { color: var(--green); }
+
+.seg.styles { margin: 2px 6px 6px; }
+.layers-pop h4 { padding: 8px 10px 4px; }
+
+.tool.active { background: var(--blue); color: #fff; border-color: transparent; }
+.tool.active:hover { background: #3395ff; }
+.update { height: 38px; padding: 0 14px; border-radius: 19px; display: flex; align-items: center; gap: 7px; color: #fff; background: var(--blue); border-color: transparent; font-weight: 600; font-size: 13px; white-space: nowrap; }
+.update:hover { background: #3395ff; }
+.update:disabled { opacity: 0.8; cursor: default; }
+
+.threat { position: absolute; left: 50%; top: 62px; transform: translateX(-50%); z-index: 15; height: 34px; padding: 0 16px; border-radius: 17px; display: flex; align-items: center; gap: 9px; color: #fff; background: rgba(255, 69, 58, 0.88); border-color: transparent; font-weight: 600; font-size: 13.5px; pointer-events: none; white-space: nowrap; }
+.threat i { width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.35; } }
+@media (max-width: 1640px) { .threat { top: 108px; } }
+
+.row-info { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; }
+.row-info span { display: grid; }
+.row-info button { padding: 6px 12px; border-radius: 8px; background: var(--fill-2); font-weight: 600; font-size: 13px; white-space: nowrap; }
+.row-info button.primary { background: var(--blue); color: #fff; }
+.row-info button:disabled { opacity: 0.6; }
+.full-name { font-size: 11.5px; line-height: 1.3; }

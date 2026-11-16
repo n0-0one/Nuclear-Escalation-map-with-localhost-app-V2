@@ -5,10 +5,11 @@
 import { useEffect, useRef } from "preact/hooks";
 import { effect } from "@preact/signals";
 import { packUrl } from "../transport";
-import { convoysShown, core, enemyTeam, eraIndex, focusRequest, hoverAt, hovered, isLive, level, prefs, selected, siteName, siteShown, siteStates, snapshot, variant, view } from "../store";
+import { convoysShown, core, enemyTeam, eraIndex, focusRequest, hoverAt, hovered, hoveredUnit, isLive, level, prefs, selected, setPref, siteName, siteShown, siteStates, snapshot, variant, view } from "../store";
+import { iconBitmap, iconVersion, loadIcons, SITE_ICON } from "./icons";
 import type { Level, Site } from "../types";
 import { clearCover, coverCanvas, coverVersion, loadTerrain, requestCover, terrainReady } from "./cover";
-import { COLOR, FONT, drawChevron, drawSite, isMinor, label, rgba, sideColor } from "./symbols";
+import { COLOR, FONT, drawChevron, drawRunwayMark, drawSite, drawSiteMarks, isMinor, label, rgba, sideColor } from "./symbols";
 
 interface Camera { x: number; z: number; ppm: number }
 
@@ -68,6 +69,32 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
     const sy = (wz: number) => (cam.z - wz) * cam.ppm + height / 2;
     const toWorld = (px: number, py: number): [number, number] => [(px - width / 2) / cam.ppm + cam.x, cam.z - (py - height / 2) / cam.ppm];
 
+    const saveCamera = () => {
+      const l = level.value;
+      if (!l) return;
+      try {
+        localStorage.setItem(`ntl.camera.${l.id}`, JSON.stringify([Math.round(cam.x), Math.round(cam.z), cam.ppm]));
+      } catch {
+        /* storage unavailable */
+      }
+    };
+    let saveTimer = 0;
+    const saveSoon = () => {
+      clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(saveCamera, 600);
+    };
+    const restoreCamera = (l: Level): boolean => {
+      try {
+        const saved = JSON.parse(localStorage.getItem(`ntl.camera.${l.id}`) || "null");
+        if (Array.isArray(saved) && saved.length === 3 && saved.every((n) => Number.isFinite(n))) {
+          [cam.x, cam.z, cam.ppm] = saved;
+          return true;
+        }
+      } catch {
+        /* nothing saved */
+      }
+      return false;
+    };
     const fit = (l: Level) => {
       const [x0, z0, x1, z1] = l.bounds;
       cam.x = (x0 + x1) / 2;
@@ -367,8 +394,19 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
       }
 
       // --- sites
+      const style = prefs.value.iconStyle;
       const order = v.sites.map((_, i) => i).sort((a, b) => Number(isMinor(v.sites[b].cat)) - Number(isMinor(v.sites[a].cat)));
       const labelZoom = cam.ppm > 0.012;
+      const hoverUnit = hoveredUnit.value;
+      /** Draws one game symbol centred at x, y; false while it is still loading. */
+      const symbol = (type: string, x: number, y: number, size: number, isEnemy: boolean, dead: boolean) => {
+        if (style === "simple") return false;
+        const bitmap = iconBitmap(style, type, isEnemy, dead, size, dpr);
+        if (!bitmap) return false;
+        const w = bitmap.width / dpr, h = bitmap.height / dpr;
+        ctx.drawImage(bitmap, Math.round(x - w / 2), Math.round(y - h / 2), w, h);
+        return true;
+      };
       for (const si of order) {
         const site = v.sites[si];
         if (site.cat === "radar_pad" || !siteShown(site)) continue;
@@ -379,6 +417,10 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
         if (!onScreen(px, py)) continue;
         const minor = isMinor(site.cat);
         const size = (minor ? 6.5 : 11) * (detail ? 0.85 : 1);
+        let soonest: number | null = null;
+        for (const unit of state.units.values()) {
+          if (unit[0] === "destroyed" && unit[3] !== null && unit[3] > 0) soonest = soonest === null ? unit[3] : Math.min(soonest, unit[3]);
+        }
 
         if (detail) {
           // every vehicle of the site at its mission position
@@ -387,36 +429,68 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
             const ux = sx(u.p[0]), uy = sy(u.p[1]);
             const unit = state.units.get(slot);
             const dead = unit?.[0] === "destroyed";
-            ctx.beginPath();
-            ctx.arc(ux, uy, 3.5, 0, Math.PI * 2);
-            ctx.fillStyle = dead ? rgba(COLOR.panel, 0.8) : sideColor(isEnemy);
-            ctx.fill();
-            ctx.strokeStyle = dead ? rgba(COLOR.dim, 0.9) : unit?.[2] ? COLOR.ink : rgba(COLOR.panel, 0.9);
-            ctx.lineWidth = 1.25;
-            ctx.stroke();
-            if (dead) {
+            const isHover = hoverUnit?.site === si && hoverUnit.slot === slot;
+            if (isHover) {
               ctx.beginPath();
-              ctx.moveTo(ux - 5, uy - 5);
-              ctx.lineTo(ux + 5, uy + 5);
-              ctx.moveTo(ux + 5, uy - 5);
-              ctx.lineTo(ux - 5, uy + 5);
-              ctx.strokeStyle = COLOR.hostile;
-              ctx.lineWidth = 2;
+              ctx.arc(ux, uy, 15, 0, Math.PI * 2);
+              ctx.strokeStyle = rgba(COLOR.ink, 0.75);
+              ctx.lineWidth = 1.5;
               ctx.stroke();
             }
-            if (cam.ppm > 0.3) label(ctx, c.units[u.u]?.s ?? c.units[u.u]?.n ?? u.u, ux, uy + 6, rgba(COLOR.ink, 0.85), 10);
+            const type = c.units[u.u]?.it ?? "tank";
+            if (!symbol(type, ux, uy, 22, isEnemy, dead)) {
+              ctx.beginPath();
+              ctx.arc(ux, uy, 3.5, 0, Math.PI * 2);
+              ctx.fillStyle = dead ? rgba(COLOR.panel, 0.8) : sideColor(isEnemy);
+              ctx.fill();
+              ctx.strokeStyle = dead ? rgba(COLOR.dim, 0.9) : unit?.[2] ? COLOR.ink : rgba(COLOR.panel, 0.9);
+              ctx.lineWidth = 1.25;
+              ctx.stroke();
+            }
+            if (dead) {
+              ctx.beginPath();
+              ctx.moveTo(ux - 6, uy - 6);
+              ctx.lineTo(ux + 6, uy + 6);
+              ctx.moveTo(ux + 6, uy - 6);
+              ctx.lineTo(ux - 6, uy + 6);
+              ctx.strokeStyle = COLOR.hostile;
+              ctx.lineWidth = 2.25;
+              ctx.stroke();
+            } else if (unit?.[2] && style !== "simple") {
+              // on the game's map right now: a small dot under the symbol
+              ctx.beginPath();
+              ctx.arc(ux, uy + 13, 2, 0, Math.PI * 2);
+              ctx.fillStyle = COLOR.ink;
+              ctx.fill();
+            }
+            if (cam.ppm > 0.3) label(ctx, c.units[u.u]?.s ?? c.units[u.u]?.n ?? u.u, ux, uy + 13, rgba(COLOR.ink, 0.85), 10);
           });
         }
         if (!detail || !minor) {
-          drawSite(ctx, px, py - (detail ? 22 : 0), {
+          const cy = py - (detail ? 26 : 0);
+          const marks = {
             enemy: isEnemy, cat: site.cat, size,
             strength: snap ? state.alive / Math.max(1, state.total) : null,
             total: state.total, destroyed: state.destroyed,
             selected: selected.value === si, hovered: hovered.value === si, seen: state.visible > 0,
-          });
+          };
+          if (site.cat === "airfield" && style !== "simple" && site.rw?.length) {
+            const longest = site.rw.reduce((a, b) => (Math.hypot(b[2] - b[0], b[3] - b[1]) > Math.hypot(a[2] - a[0], a[3] - a[1]) ? b : a));
+            drawRunwayMark(ctx, px, cy, Math.atan2(-(longest[3] - longest[1]), longest[2] - longest[0]), isEnemy, state.destroyed);
+            drawSiteMarks(ctx, px, cy, 13, marks);
+          } else if (style !== "simple" && SITE_ICON[site.cat] && symbol(SITE_ICON[site.cat], px, cy, minor ? 20 : 28, isEnemy, state.destroyed)) {
+            drawSiteMarks(ctx, px, cy, minor ? 9 : 13, marks);
+          } else {
+            drawSite(ctx, px, cy, marks);
+          }
         }
+        const below = py + (style !== "simple" ? 16 : size + 4);
         if (layers.labels && labelZoom && !minor && !detail) {
-          label(ctx, state.destroyed ? `${siteName(site)} · destroyed` : siteName(site), px, py + size + 4, state.destroyed ? rgba(COLOR.hostile, 0.95) : rgba(COLOR.ink, 0.85), 11);
+          label(ctx, state.destroyed ? `${siteName(site)} · destroyed` : siteName(site), px, below, state.destroyed ? rgba(COLOR.hostile, 0.95) : rgba(COLOR.ink, 0.85), 11);
+        }
+        if (soonest !== null && labelZoom && (!minor || detail)) {
+          // a destroyed unit here comes back on a timer
+          label(ctx, `back in ${Math.floor(soonest / 60)}:${String(Math.round(soonest % 60)).padStart(2, "0")}`, px, below + (layers.labels && !detail && !minor ? 14 : 0), COLOR.amber, 10.5);
         }
       }
 
@@ -577,15 +651,36 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
     };
 
     // -------------------------------------------------------- interaction
+    /** A single vehicle under the pointer; only at close zoom. */
+    const unitAt = (px: number, py: number): { site: number; slot: number } | null => {
+      const v = variant.value;
+      if (!v || cam.ppm <= 0.085) return null;
+      const bit = eraIndex.value;
+      let best: { site: number; slot: number } | null = null, bestD = 13;
+      v.sites.forEach((site: Site, si) => {
+        if (site.cat === "radar_pad" || !siteShown(site)) return;
+        site.units.forEach((u, slot) => {
+          if (!((u.e >> bit) & 1)) return;
+          const d = Math.hypot(sx(u.p[0]) - px, sy(u.p[1]) - py);
+          if (d < bestD) {
+            bestD = d;
+            best = { site: si, slot };
+          }
+        });
+      });
+      return best;
+    };
     const siteAt = (px: number, py: number): number | null => {
       const v = variant.value;
       if (!v) return null;
+      const lift = cam.ppm > 0.085 ? 26 : 0; // the site symbol sits above its vehicles at close zoom
       const states = siteStates.value;
       let best: number | null = null, bestD = 18;
       v.sites.forEach((site: Site, si) => {
         if (site.cat === "radar_pad" || !siteShown(site)) return;
         if ((states.get(si)?.total ?? 0) === 0 && site.cat !== "airfield") return;
-        const d = Math.hypot(sx(site.p[0]) - px, sy(site.p[1]) - py) + (isMinor(site.cat) ? 4 : 0);
+        if (lift && isMinor(site.cat)) return;
+        const d = Math.hypot(sx(site.p[0]) - px, sy(site.p[1]) - lift - py) + (isMinor(site.cat) ? 4 : 0);
         if (d < bestD) {
           bestD = d;
           best = si;
@@ -621,22 +716,27 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
       if (drag) {
         const dx = px - drag.x, dy = py - drag.y;
         if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
-        if (drag.moved && hovered.value !== null) {
+        if (drag.moved && (hovered.value !== null || hoveredUnit.value)) {
           hovered.value = null;
+          hoveredUnit.value = null;
           hoverAt.value = null;
         }
+        if (drag.moved && prefs.value.follow) setPref({ follow: false }); // moving the map yourself ends "follow me"
         cam.x -= dx / cam.ppm;
         cam.z += dy / cam.ppm;
         drag.x = px;
         drag.y = py;
         clamp();
         invalidate(true);
+        saveSoon();
         return;
       }
-      const hit = siteAt(px, py);
+      const unit = unitAt(px, py);
+      const hit = unit ? null : siteAt(px, py);
+      if (unit?.site !== hoveredUnit.value?.site || unit?.slot !== hoveredUnit.value?.slot) hoveredUnit.value = unit;
       if (hit !== hovered.value) hovered.value = hit;
-      hoverAt.value = hit !== null ? { x: e.clientX, y: e.clientY } : null;
-      host.style.cursor = hit !== null ? "pointer" : "grab";
+      hoverAt.value = hit !== null || unit ? { x: e.clientX, y: e.clientY } : null;
+      host.style.cursor = hit !== null || unit ? "pointer" : "grab";
     };
     const up = (e: PointerEvent) => {
       const [px, py] = point(e);
@@ -646,7 +746,7 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
         invalidate();
         return;
       }
-      if (drag && !drag.moved) selected.value = siteAt(px, py);
+      if (drag && !drag.moved) selected.value = unitAt(px, py)?.site ?? siteAt(px, py);
       drag = null;
     };
     const wheel = (e: WheelEvent) => {
@@ -660,10 +760,12 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
       cam.z += before[1] - after[1];
       clamp();
       invalidate(true);
+      saveSoon();
     };
     const leave = () => {
       onCursor?.(null);
       if (hovered.value !== null) hovered.value = null;
+      hoveredUnit.value = null;
       hoverAt.value = null;
     };
     const noMenu = (e: Event) => e.preventDefault();
@@ -677,6 +779,7 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
     const observer = new ResizeObserver(resize);
     observer.observe(host);
     resize();
+    loadIcons();
 
     const stops = [
       effect(() => {
@@ -684,7 +787,7 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
         variant.value;
         if (l && fitted !== `${l.id}:${view.value.variant}`) {
           fitted = `${l.id}:${view.value.variant}`;
-          fit(l);
+          if (!restoreCamera(l)) fit(l);
           clamp();
         }
         if (l && (art?.id !== l.id || art.src !== (l.image_url ?? l.image ?? "")) && loadingArt !== `${l.id}:${l.image_url ?? l.image}`) {
@@ -710,8 +813,17 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
         invalidate(true);
       }),
       effect(() => {
-        coverVersion.value;
+        coverVersion.value; iconVersion.value; hoveredUnit.value; prefs.value.iconStyle;
         invalidate();
+      }),
+      effect(() => {
+        // "Follow me": keep the player in the middle of the map.
+        const s = snapshot.value;
+        if (!prefs.value.follow || !isLive.value || !s?.player) return;
+        cam.x = s.player.p[0];
+        cam.z = s.player.p[1];
+        clamp();
+        invalidate(true);
       }),
       effect(() => {
         // Recompute terrain cover when the sites, their state or the altitude change.
