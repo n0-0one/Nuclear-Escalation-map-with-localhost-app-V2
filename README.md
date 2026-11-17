@@ -42,7 +42,18 @@ Windows may show a "Windows protected your PC" notice because the installer is n
 
 ### Updates
 
-The app checks for new versions by itself. When one is out, a blue **Update** button appears at the top right (and in Settings): click it, the installer opens and the app closes. The installer is checked against the checksum published with the release before it is started. Copies from the portable ZIP open the download page instead.
+The app checks for new versions by itself. When one is out, a blue **Update** button appears at the top right (and in Settings). Every download is checked against the checksum published with the release before it is used.
+
+- **Installed copy:** the installer opens and the app closes.
+- **Portable copy:** the new version is unpacked into the app's own folder and restarted. Your settings and recordings are kept.
+
+### Everything in one folder
+
+The **portable ZIP** keeps everything in the folder you unpack it to: the program, the map data, and a `user-data` folder with your settings, map updates, recordings and browser cache. Nothing goes to AppData. To move it, move the folder; to remove it, delete the folder. *Settings → Folders* shows and opens these folders.
+
+Already using the installed version? [`tools/move-to-one-folder.ps1`](tools/move-to-one-folder.ps1) sets up the portable version in a folder you choose, copies your settings and recordings over and makes a desktop shortcut.
+
+The **installed** version puts the program in `%LOCALAPPDATA%\Nuclear Thunder Live` and settings in `%APPDATA%\io.github.n0-0one.nuclear-thunder-live`.
 
 For the mini map window to stay on top of the game, run War Thunder in **borderless** or **windowed** mode.
 

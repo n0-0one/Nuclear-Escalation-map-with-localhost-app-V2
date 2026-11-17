@@ -19,6 +19,8 @@ use tauri::{Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
 struct App {
     host: Host,
+    /// Where the mini map window keeps its browser data (portable copies only).
+    webview_dir: Option<PathBuf>,
     pack_dir: PathBuf,
     /// Writable folder for downloaded data, settings and recordings.
     data_root: PathBuf,
@@ -66,7 +68,33 @@ fn engine(state: tauri::State<'_, App>, cmd: String, args: Value) -> Result<Valu
 
 #[tauri::command]
 fn app_info(state: tauri::State<'_, App>) -> Value {
-    json!({ "version": env!("CARGO_PKG_VERSION"), "pack_source": state.pack_source, "portable": appupdate::is_portable() })
+    let program = std::env::current_exe().ok().and_then(|exe| exe.parent().map(|d| d.display().to_string()));
+    json!({
+        "version": env!("CARGO_PKG_VERSION"),
+        "pack_source": state.pack_source,
+        "portable": state.webview_dir.is_some(),
+        "program_folder": program,
+        "data_folder": state.data_root.display().to_string(),
+    })
+}
+
+/// Opens the program's folder or its data folder in Explorer.
+#[tauri::command]
+fn open_folder(window: tauri::WebviewWindow, state: tauri::State<'_, App>, which: String) -> Result<(), String> {
+    if window.label() != "main" {
+        return Err("Only the main window opens folders.".into());
+    }
+    let folder = match which.as_str() {
+        "program" => std::env::current_exe().map_err(|e| e.to_string())?.parent().ok_or("Unknown folder")?.to_path_buf(),
+        "data" => state.data_root.clone(),
+        "recordings" => {
+            let dir = state.data_root.join("recordings");
+            let _ = std::fs::create_dir_all(&dir);
+            dir
+        }
+        _ => return Err("Unknown folder.".into()),
+    };
+    appupdate::open_path(&folder.display().to_string())
 }
 
 fn run_update(pack_dir: &Path, data_root: &Path) -> Result<String, String> {
@@ -121,7 +149,12 @@ fn overlay(window: tauri::WebviewWindow, app: tauri::AppHandle, action: String) 
             overlay.set_ignore_cursor_events(false).map_err(|e| e.to_string())?;
             overlay.show().map_err(|e| e.to_string())
         }
-        ("show", None) => WebviewWindowBuilder::new(&app, "overlay", WebviewUrl::App("index.html?overlay=1".into()))
+        ("show", None) => {
+            let mut builder = WebviewWindowBuilder::new(&app, "overlay", WebviewUrl::App("index.html?overlay=1".into()));
+            if let Some(dir) = app.try_state::<App>().and_then(|state| state.webview_dir.clone()) {
+                builder = builder.data_directory(dir);
+            }
+            builder
             .title("Nuclear Thunder Live - mini map")
             .inner_size(300.0, 340.0)
             .min_inner_size(200.0, 230.0)
@@ -133,7 +166,8 @@ fn overlay(window: tauri::WebviewWindow, app: tauri::AppHandle, action: String) 
             .focused(false)
             .build()
             .map(|_| ())
-            .map_err(|e| e.to_string()),
+            .map_err(|e| e.to_string())
+        }
         ("hide", Some(overlay)) => overlay.hide().map_err(|e| e.to_string()),
         ("locked", Some(overlay)) => overlay.set_ignore_cursor_events(true).map_err(|e| e.to_string()),
         ("unlocked", Some(overlay)) => overlay.set_ignore_cursor_events(false).map_err(|e| e.to_string()),
@@ -160,6 +194,21 @@ fn choose_pack(bundled: &Path, data_root: &Path) -> Result<(Arc<Pack>, PathBuf, 
     Ok((Arc::new(pack), bundled.to_path_buf(), "built-in"))
 }
 
+/// A portable copy keeps everything in a `user-data` folder next to the
+/// program, so the whole app lives in one folder. Installed copies (and a
+/// portable copy in a folder it cannot write to) use the usual AppData folder.
+fn portable_root() -> Option<PathBuf> {
+    if cfg!(debug_assertions) || !appupdate::is_portable() {
+        return None;
+    }
+    let dir = std::env::current_exe().ok()?.parent()?.join("user-data");
+    std::fs::create_dir_all(&dir).ok()?;
+    let probe = dir.join(".write-test");
+    std::fs::write(&probe, b"ok").ok()?;
+    let _ = std::fs::remove_file(&probe);
+    Some(dir)
+}
+
 fn main() {
     tauri::Builder::default()
         .register_uri_scheme_protocol("pack", |context, request| {
@@ -176,8 +225,16 @@ fn main() {
                 .into_iter()
                 .find(|dir| dir.join("core.json").exists())
                 .ok_or("The app's map data is missing. Please reinstall.")?;
-            let data_root = app.path().app_data_dir()?;
+            appupdate::cleanup_previous();
+            let appdata = app.path().app_data_dir()?;
+            let portable = portable_root();
+            let data_root = portable.clone().unwrap_or_else(|| appdata.clone());
             let _ = std::fs::create_dir_all(&data_root);
+            // Moving from the installed version: bring the settings along once.
+            if portable.is_some() && !data_root.join("settings.json").exists() {
+                let _ = std::fs::copy(appdata.join("settings.json"), data_root.join("settings.json"));
+            }
+            let webview_dir = portable.as_ref().map(|root| root.join("webview"));
             let (pack, pack_dir, pack_source) = choose_pack(&bundled, &data_root)?;
             let emitter = handle.clone();
             let host = Host::start(
@@ -193,7 +250,18 @@ fn main() {
             if let Ok(level) = std::env::var("NTL_DEMO") {
                 let _ = host.command("demo_start", json!({ "level": level, "speed": 10.0 }));
             }
-            app.manage(App { host, pack_dir: pack_dir.clone(), data_root: data_root.clone(), pack_source });
+            app.manage(App { host, webview_dir: webview_dir.clone(), pack_dir: pack_dir.clone(), data_root: data_root.clone(), pack_source });
+
+            // The main window is created here (not in tauri.conf.json) so a
+            // portable copy can keep its browser data in its own folder too.
+            let mut main = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+                .title("Nuclear Thunder Live")
+                .inner_size(1500.0, 920.0)
+                .min_inner_size(980.0, 600.0);
+            if let Some(dir) = webview_dir {
+                main = main.data_directory(dir);
+            }
+            main.build()?;
 
             // Look for newer map data shortly after start, without holding anything up.
             let notifier = handle.clone();
@@ -214,7 +282,7 @@ fn main() {
                 window.app_handle().exit(0);
             }
         })
-        .invoke_handler(tauri::generate_handler![engine, app_info, update_data, overlay, app_update_check, app_update_install])
+        .invoke_handler(tauri::generate_handler![engine, app_info, update_data, overlay, app_update_check, app_update_install, open_folder])
         .run(tauri::generate_context!())
         .expect("the app window could not be created");
 }

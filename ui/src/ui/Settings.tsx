@@ -7,7 +7,8 @@ import { appUpdate, checkForUpdate, installUpdate, updateMessage } from "./updat
 
 const message = signal("");
 const diagText = signal<string | null>(null);
-const appInfo = signal<{ version: string; pack_source: string } | null>(null);
+interface AppInfo { version: string; pack_source: string; portable?: boolean; program_folder?: string; data_folder?: string }
+const appInfo = signal<AppInfo | null>(null);
 
 function Slider(props: { label: string; value: number; min: number; max: number; step: number; unit: string; onChange: (n: number) => void }) {
   return (
@@ -67,7 +68,7 @@ export function SettingsDialog() {
   const s = snapshot.value, c = core.value, m = manifest.value, v = view.value;
   if (!s || !c) return null;
   const settings = s.settings;
-  if (isDesktop && !appInfo.value) shell<{ version: string; pack_source: string }>("app_info").then((info) => (appInfo.value = info)).catch(() => {});
+  if (isDesktop && !appInfo.value) shell<AppInfo>("app_info").then((info) => (appInfo.value = info)).catch(() => {});
   const close = () => {
     settingsOpen.value = false;
     diagText.value = null;
@@ -160,7 +161,7 @@ export function SettingsDialog() {
               </span>
               {appUpdate.value?.newer ? (
                 <button class="primary" disabled={appUpdate.value.busy} onClick={installUpdate}>
-                  {appUpdate.value.busy ? appUpdate.value.progress ?? "Working…" : appUpdate.value.portable ? "Download" : "Update now"}
+                  {appUpdate.value.busy ? appUpdate.value.progress ?? "Working…" : "Update now"}
                 </button>
               ) : (
                 isDesktop && <button onClick={() => checkForUpdate(true)}>Check now</button>
@@ -168,7 +169,40 @@ export function SettingsDialog() {
             </div>
           </div>
           {updateMessage.value && <p class="hint strong">{updateMessage.value}</p>}
-          {appUpdate.value?.newer && !appUpdate.value.portable && <p class="hint">The installer opens and the app closes. Your settings are kept.</p>}
+          {appUpdate.value?.newer && (
+            <p class="hint">
+              {appUpdate.value.portable
+                ? "The new version is unpacked into this app's folder and started. Your settings and recordings are kept."
+                : "The installer opens and the app closes. Your settings are kept."}
+            </p>
+          )}
+
+          {isDesktop && appInfo.value?.data_folder && (
+            <>
+              <h3>Folders</h3>
+              <div class="group">
+                <div class="row-info">
+                  <span>
+                    <b>Program</b>
+                    <small class="path">{appInfo.value.program_folder}</small>
+                  </span>
+                  <button onClick={() => shell("open_folder", { which: "program" })}>Open</button>
+                </div>
+                <div class="row-info">
+                  <span>
+                    <b>Settings, map updates and recordings</b>
+                    <small class="path">{appInfo.value.data_folder}</small>
+                  </span>
+                  <button onClick={() => shell("open_folder", { which: "data" })}>Open</button>
+                </div>
+              </div>
+              <p class="hint">
+                {appInfo.value.portable
+                  ? "Portable copy: everything this app uses lives in its own folder. Move or delete the folder and that is all."
+                  : "Want everything in one folder? Use the portable version instead of the installer."}
+              </p>
+            </>
+          )}
 
           <h3>Map data</h3>
           <dl class="facts">

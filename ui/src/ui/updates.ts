@@ -9,7 +9,7 @@ export interface AppUpdate {
   current: string;
   latest: string;
   newer: boolean;
-  /** Running from the portable ZIP: updating means downloading the new ZIP. */
+  /** Running from the portable ZIP: the new ZIP is unpacked over this folder. */
   portable: boolean;
   page: string;
   busy?: boolean;
@@ -40,7 +40,7 @@ export async function checkForUpdate(manual = false) {
 export async function installUpdate() {
   const current = appUpdate.value;
   if (!current?.newer || current.busy) return;
-  appUpdate.value = { ...current, busy: true, progress: current.portable ? "Opening the download page…" : "Downloading the update…", error: undefined };
+  appUpdate.value = { ...current, busy: true, progress: "Downloading the update…", error: undefined };
   try {
     const result = await shell<string>("app_update_install");
     updateMessage.value = result ?? "";

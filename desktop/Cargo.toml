@@ -20,6 +20,8 @@ ntl-engine = { path = "../crates/engine" }
 ureq = { version = "2", default-features = false, features = ["native-tls"] }
 native-tls = "0.2"
 sha2 = "0.10"
+# Unpacking the portable ZIP when the portable copy updates itself.
+zip = { version = "2", default-features = false, features = ["deflate"] }
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]
