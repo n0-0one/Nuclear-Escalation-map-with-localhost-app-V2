@@ -277,3 +277,38 @@ def unit_icon_type(unit_id: str, spec: dict, role: str = "") -> str:
     if "truck" in name or "carrier" in name or "wheeled" in name:
         return "truck"
     return "tank"
+
+
+def gun_range(dm: Datamine, unit_id: str) -> tuple[float, str] | None:
+    """A ground unit's anti-aircraft gun range read straight from its game files.
+
+    Used when the reference extraction has no weapon data for a unit. The
+    gun's ``attackMaxDist`` (how far the AI opens fire) is preferred, then its
+    ``aimMaxDist``. Returns (metres, weapon id).
+    """
+    base = unit_id.rsplit("/", 1)[-1].lower()
+    folder = "aces.vromfs.bin_u/gamedata/units/tankmodels"
+    match = next((path for path in dm.ls(f"{folder}/{base}.blkx")), None)
+    if match is None:
+        return None
+    try:
+        unit = dm.read_json(match)
+    except Exception:
+        return None
+    weapons = (unit.get("commonWeapons") or {}).get("Weapon") or []
+    if isinstance(weapons, dict):
+        weapons = [weapons]
+    best: tuple[float, str] | None = None
+    for weapon in weapons:
+        blk = str(weapon.get("blk") or "").replace("\\", "/").lower() if isinstance(weapon, dict) else ""
+        if not blk.startswith("gamedata/weapons/"):
+            continue
+        path = "aces.vromfs.bin_u/" + blk.removesuffix(".blk") + ".blkx"
+        try:
+            data = dm.read_json(path)
+        except Exception:
+            continue
+        reach = data.get("attackMaxDist") or data.get("aimMaxDist")
+        if isinstance(reach, (int, float)) and reach > 0 and (best is None or reach > best[0]):
+            best = (float(reach), blk.rsplit("/", 1)[-1].removesuffix(".blk"))
+    return best

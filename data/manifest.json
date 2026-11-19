@@ -1,9 +1,9 @@
 {
  "schema": 1,
- "game_version": "2.61.0.30",
+ "game_version": "2.61.0.33",
  "datamine": {
   "repository": "gszabi99/War-Thunder-Datamine",
-  "commit": "a675318256f63e4fa88b7bb81cebba03f4b6a12f"
+  "commit": "6ee0add55df2612ca6100885f60db603c54ed606"
  },
  "terrain_source": {
   "repository": "majorlier/nuclear-thunder-interactive-map",
@@ -24,8 +24,8 @@
  ],
  "files": {
   "core.json": {
-   "sha256": "5f995246b816515251b020e27661b247a8bdc610cfdc1bbe5c68e40cb7fad8bd",
-   "bytes": 246740
+   "sha256": "0fad33eb553ef2b7e3f375c61e002dfc0561e8ccf9b0d1a7d760f6470bdf326d",
+   "bytes": 246858
   },
   "icons.json": {
    "sha256": "ff3279c105714efc182c469d642c21b47ea90f2060ed1d8730aa3e66ebde2871",
@@ -48,8 +48,8 @@
    "bytes": 354112
   },
   "levels/archipelago.webp": {
-   "sha256": "fae42367cfb50277596dedcac3d45c71ec68bf7cd500e0cbd86897029b51fc7c",
-   "bytes": 1543310
+   "sha256": "07682181c961f348fc9ca86afb2793d4193e98c32ba46294f67f94fd593b320b",
+   "bytes": 1566546
   },
   "levels/kamchatka.height.json": {
    "sha256": "b66753c6bd57d28fd9b371a74abdcb5a751d8ada2d18a3c8200ce0482661d8d4",
@@ -690,5 +690,5 @@
    "sha": "40ca7c509c04fc39eb6bd3a82b7b6b7cebcd70e6"
   }
  ],
- "generated": "2026-11-19T13:53:23Z"
+ "generated": "2026-11-19T21:42:40Z"
 }

@@ -57,7 +57,7 @@ function Strike({ s, v }: { s: Snapshot; v: Variant }) {
 function CueRow({ cue, index, v }: { cue: Cue; index: number; v: Variant }) {
   const site = v.sites[cue.site];
   const groups = unitGroups(site, cue.site);
-  const launcher = groups.find((g) => g.total > g.destroyed && (g.spec?.eng ?? 0) > 0) ?? groups[0];
+  const launcher = groups.find((g) => g.total > g.destroyed && (g.spec?.eng ?? g.spec?.gun ?? 0) > 0) ?? groups[0];
   return (
     <button class={`card cue ${cue.inside ? "inside" : ""}`} onClick={() => go(cue.site, v)}>
       <span class="num">{index + 1}</span>
@@ -163,7 +163,7 @@ function SiteDetail({ index, v }: { index: number; v: Variant }) {
   const state = siteStates.value.get(index);
   const enemy = site.team === enemyTeam.value;
   const groups = unitGroups(site, index);
-  const reach = Math.max(0, ...groups.map((g) => g.spec?.eng ?? g.spec?.ai_eng ?? 0), ...site.units.map((u) => u.tr ?? 0));
+  const reach = Math.max(0, ...groups.map((g) => g.spec?.eng ?? g.spec?.ai_eng ?? g.spec?.gun ?? 0), ...site.units.map((u) => u.tr ?? 0));
   const radar = Math.max(0, ...groups.map((g) => g.spec?.det ?? 0));
   const mark = (slot: number | null, destroyed: boolean | null) =>
     command("mark", { site: index, ...(slot !== null ? { slot } : {}), ...(destroyed !== null ? { destroyed } : {}) });
@@ -287,7 +287,7 @@ function UnitHoverCard({ siteIndex, slot, at, v }: { siteIndex: number; slot: nu
   const unit = isLive.value ? siteStates.value.get(siteIndex)?.units.get(slot) : undefined;
   const dead = unit?.[0] === "destroyed";
   const player = isLive.value ? snapshot.value?.player : null;
-  const reach = spec?.eng ?? spec?.ai_eng ?? placement.tr ?? 0;
+  const reach = spec?.eng ?? spec?.ai_eng ?? spec?.gun ?? placement.tr ?? 0;
   const weapon = spec?.w?.[0];
   const status = !unit
     ? null
@@ -332,7 +332,7 @@ export function HoverCard() {
   const state = siteStates.value.get(index);
   const enemy = site.team === enemyTeam.value;
   const groups = unitGroups(site, index);
-  const reach = Math.max(0, ...groups.map((g) => g.spec?.eng ?? g.spec?.ai_eng ?? 0), ...site.units.map((u) => u.tr ?? 0));
+  const reach = Math.max(0, ...groups.map((g) => g.spec?.eng ?? g.spec?.ai_eng ?? g.spec?.gun ?? 0), ...site.units.map((u) => u.tr ?? 0));
   const player = isLive.value ? snapshot.value?.player : null;
   // keep the card inside the window
   const width = 280, height = 96 + Math.ceil(Math.max(1, groups.length) / 2) * 92;

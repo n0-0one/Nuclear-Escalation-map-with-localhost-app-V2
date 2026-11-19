@@ -604,6 +604,13 @@ def main() -> int:
                 for placement in site["units"]:
                     roles.setdefault(placement["u"], placement.get("r", ""))
     for unit_id, unit in units.items():
+        # Air defence the reference has no weapon data for: read the gun from the game.
+        if not any(unit.get(key) for key in ("eng", "ai_eng", "gun")) and "spaa" in roles.get(unit_id, "") + unit.get("type", "").lower():
+            found = extras.gun_range(dm, unit_id)
+            if found:
+                unit["gun"] = r1(found[0])
+                unit.setdefault("w", [{"n": weapon_names.get(found[1], found[1]), "max": found[0]}])
+    for unit_id, unit in units.items():
         unit["it"] = extras.unit_icon_type(unit_id, specs.get(unit_id, {"unit_class": unit_id}), roles.get(unit_id, ""))
     dump(out / "icons.json", extras.map_icons(dm))
 
