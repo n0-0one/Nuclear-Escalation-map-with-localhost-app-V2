@@ -1,19 +1,31 @@
 {
  "schema": 1,
- "game_version": "2.61.0.26",
+ "game_version": "2.61.0.30",
  "datamine": {
   "repository": "gszabi99/War-Thunder-Datamine",
-  "commit": "f65dbd485f6b9eb1fb9f9c67cb6dd177650e9a27"
+  "commit": "a675318256f63e4fa88b7bb81cebba03f4b6a12f"
  },
  "terrain_source": {
   "repository": "majorlier/nuclear-thunder-interactive-map",
   "commit": "54c7107f729cea8578b6b99330fbcbb2e7202b12"
  },
- "pending_game_changes": [],
+ "pending_game_changes": [
+  "aces.vromfs.bin_u/templates/nuclear_escalation/airfields.blkx",
+  "aces.vromfs.bin_u/templates/nuclear_escalation/factory_air_defence_presets.blkx",
+  "aces.vromfs.bin_u/templates/nuclear_escalation/factory_equip.blkx",
+  "aces.vromfs.bin_u/templates/nuclear_escalation/factory_tank.blkx",
+  "aces.vromfs.bin_u/templates/nuclear_escalation/strongpoints.blkx",
+  "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_archipelago_mirror_nuclear_escalation_tdm.blkx",
+  "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_archipelago_nuclear_escalation_tdm.blkx",
+  "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_kamchatka_mirror_nuclear_escalation_tdm.blkx",
+  "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_kamchatka_nuclear_escalation_tdm.blkx",
+  "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_south_eastern_city_mirror_nuclear_escalation_tdm.blkx",
+  "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_south_eastern_city_nuclear_escalation_tdm.blkx"
+ ],
  "files": {
   "core.json": {
-   "sha256": "32ae7a93f82d205d626311d0fcef6c8529550dab5f4c4e70bc9713ba4fee5899",
-   "bytes": 248612
+   "sha256": "5f995246b816515251b020e27661b247a8bdc610cfdc1bbe5c68e40cb7fad8bd",
+   "bytes": 246740
   },
   "icons.json": {
    "sha256": "ff3279c105714efc182c469d642c21b47ea90f2060ed1d8730aa3e66ebde2871",
@@ -28,8 +40,8 @@
    "bytes": 2804658
   },
   "levels/archipelago.json": {
-   "sha256": "68e12143d1cf8f284d39b08252c100ce1989746fc526905911b6e50939381140",
-   "bytes": 276901
+   "sha256": "02bb65b47093ce44ebf3729a665617491d9f9fd1497a95be04c0b24364dd0c9f",
+   "bytes": 276246
   },
   "levels/archipelago.roads.json": {
    "sha256": "a0ffd99b508e70a991ab28425245a87fd84229b6bd401862c5f44d6e9546c1fa",
@@ -48,8 +60,8 @@
    "bytes": 3237768
   },
   "levels/kamchatka.json": {
-   "sha256": "75896d0f58d4f00ea8171c66fa91ce64d0dfe242a39eaefb6d2c061dc7ff7cea",
-   "bytes": 261800
+   "sha256": "0ea5ed12c4ea3d689a8a55026092685e8b1f1ebc631042b8bb417d10b6725461",
+   "bytes": 261138
   },
   "levels/kamchatka.roads.json": {
    "sha256": "b5bf542eb676fa3653b1e6d1361c23967eb84322eecb4dd79a3e2ddef8133c31",
@@ -68,8 +80,8 @@
    "bytes": 1144582
   },
   "levels/south_eastern_city.json": {
-   "sha256": "1d65e25751b0b557f71e4c70210211c27dcbd954729c19ef1d323086862d9259",
-   "bytes": 250951
+   "sha256": "c1bf9514fcf3d6ce8b9c8c905f82a8208c65aee02524ebeb003a69fcac76222f",
+   "bytes": 250172
   },
   "levels/south_eastern_city.roads.json": {
    "sha256": "1fec90b7bd08ae2831dee7674e467242bf02962a56a6f0695b17edba1f0dab90",
@@ -579,7 +591,7 @@
   },
   {
    "path": "aces.vromfs.bin_u/templates/nuclear_escalation/airfields.blkx",
-   "sha": "9395dc83284d405058e44fde4ce592aa393ed91a"
+   "sha": "f918cbd9a857ca76280888ba42445ded28f9520c"
   },
   {
    "path": "aces.vromfs.bin_u/templates/nuclear_escalation/awacs.blkx",
@@ -591,15 +603,15 @@
   },
   {
    "path": "aces.vromfs.bin_u/templates/nuclear_escalation/factory_air_defence_presets.blkx",
-   "sha": "a160b2ba200d882b959fed6e8891f29efd65e7e9"
+   "sha": "8ba2f8cdb306f5bc79d7c7aafff1c58ae18ba1d7"
   },
   {
    "path": "aces.vromfs.bin_u/templates/nuclear_escalation/factory_equip.blkx",
-   "sha": "42733ecc4f590f1acadd3b502ef27e553d5a3f62"
+   "sha": "eaca7845d1d87b782d06ecd4bd10e62c93009523"
   },
   {
    "path": "aces.vromfs.bin_u/templates/nuclear_escalation/factory_tank.blkx",
-   "sha": "0f90e381d310bb57f58221911e381be640da4832"
+   "sha": "51940973f110ca6fafca59a5ab38ee75013ae526"
   },
   {
    "path": "aces.vromfs.bin_u/templates/nuclear_escalation/sam_sites.blkx",
@@ -611,31 +623,31 @@
   },
   {
    "path": "aces.vromfs.bin_u/templates/nuclear_escalation/strongpoints.blkx",
-   "sha": "371af4f0e0d023aa2558d4c66ac8a2e16e3af04d"
+   "sha": "302356cc5d5759989b5e35ebebe379cee626cc56"
   },
   {
    "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_archipelago_mirror_nuclear_escalation_tdm.blkx",
-   "sha": "031ef43349dfe066486fe79d2ace54b1ff209802"
+   "sha": "91d9e014572972ac631f2c167ba5ba7b6a8a05a5"
   },
   {
    "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_archipelago_nuclear_escalation_tdm.blkx",
-   "sha": "a143bd121f740295c23306f5c11ac0b6ecaa8601"
+   "sha": "70e62c058319204d5eaecdeb1394b6dd341f743f"
   },
   {
    "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_kamchatka_mirror_nuclear_escalation_tdm.blkx",
-   "sha": "b27c65c19c15cb83d7cbb45d0eee621de1325ee0"
+   "sha": "82d5aadeb529804d23abc6c16f73397f81bd6e3f"
   },
   {
    "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_kamchatka_nuclear_escalation_tdm.blkx",
-   "sha": "fb320a02bff66a8463f9d50eed6750959db2d804"
+   "sha": "50a1f5a52225f5a82399cf6062ece3ec097b4cf1"
   },
   {
    "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_south_eastern_city_mirror_nuclear_escalation_tdm.blkx",
-   "sha": "93fd62935f2423410de29f37c3bf1a9c0f67813c"
+   "sha": "97ffaf117fa757ab9a881e1b926ead104ffb18fe"
   },
   {
    "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_south_eastern_city_nuclear_escalation_tdm.blkx",
-   "sha": "fccf2ec3869903cc218ed416f48847ce889ac873"
+   "sha": "f5f20304a74bafe8ba3de1cc900ffbad4a002861"
   },
   {
    "path": "mis.vromfs.bin_u/gamedata/missions/templates/air_templates/nuclear_escalation_template.blkx",
@@ -678,5 +690,5 @@
    "sha": "40ca7c509c04fc39eb6bd3a82b7b6b7cebcd70e6"
   }
  ],
- "generated": "2026-11-18T13:26:34Z"
+ "generated": "2026-11-19T13:53:23Z"
 }
