@@ -1,31 +1,19 @@
 {
  "schema": 1,
- "game_version": "2.61.0.33",
+ "game_version": "2.61.0.34",
  "datamine": {
   "repository": "gszabi99/War-Thunder-Datamine",
-  "commit": "6ee0add55df2612ca6100885f60db603c54ed606"
+  "commit": "806c0cbc4ae1c16360f712c459fd44c4dd171d21"
  },
  "terrain_source": {
   "repository": "majorlier/nuclear-thunder-interactive-map",
-  "commit": "54c7107f729cea8578b6b99330fbcbb2e7202b12"
+  "commit": "aebbf9125457212a69d0ee79df72fe339214b8bf"
  },
- "pending_game_changes": [
-  "aces.vromfs.bin_u/templates/nuclear_escalation/airfields.blkx",
-  "aces.vromfs.bin_u/templates/nuclear_escalation/factory_air_defence_presets.blkx",
-  "aces.vromfs.bin_u/templates/nuclear_escalation/factory_equip.blkx",
-  "aces.vromfs.bin_u/templates/nuclear_escalation/factory_tank.blkx",
-  "aces.vromfs.bin_u/templates/nuclear_escalation/strongpoints.blkx",
-  "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_archipelago_mirror_nuclear_escalation_tdm.blkx",
-  "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_archipelago_nuclear_escalation_tdm.blkx",
-  "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_kamchatka_mirror_nuclear_escalation_tdm.blkx",
-  "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_kamchatka_nuclear_escalation_tdm.blkx",
-  "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_south_eastern_city_mirror_nuclear_escalation_tdm.blkx",
-  "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_south_eastern_city_nuclear_escalation_tdm.blkx"
- ],
+ "pending_game_changes": [],
  "files": {
   "core.json": {
-   "sha256": "0fad33eb553ef2b7e3f375c61e002dfc0561e8ccf9b0d1a7d760f6470bdf326d",
-   "bytes": 246858
+   "sha256": "393e6e1b456e32def281d95fa94e2ccb6073957404c90594eeee2d510dffbe6e",
+   "bytes": 247784
   },
   "icons.json": {
    "sha256": "ff3279c105714efc182c469d642c21b47ea90f2060ed1d8730aa3e66ebde2871",
@@ -690,5 +678,5 @@
    "sha": "40ca7c509c04fc39eb6bd3a82b7b6b7cebcd70e6"
   }
  ],
- "generated": "2026-11-19T21:42:40Z"
+ "generated": "2026-11-20T13:36:31Z"
 }
