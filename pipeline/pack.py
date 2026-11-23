@@ -572,7 +572,9 @@ def main() -> int:
             return [lower_names(item) for item in value]
         return value
 
-    convoys = lower_names(logic.get("convoys", {}))
+    # Convoy makeups straight from the game's factory templates; the
+    # reference extraction is only a fallback if those cannot be read.
+    convoys = lower_names(extras.convoy_compositions(dm) or logic.get("convoys", {}))
     for group in convoys.values():
         for era in group.values():
             if not isinstance(era, dict):
@@ -592,6 +594,16 @@ def main() -> int:
     names, hud_names, shop_names = extras.unit_tables(dm, unit_ids)
     weapon_names_file = reference / "unit_weapon_display_names.json" if reference else None
     weapon_names = load(weapon_names_file).get("en", {}) if weapon_names_file and weapon_names_file.exists() else {}
+    # Units the reference has no weapon data for (new, or changed in a recent
+    # patch) are read straight from the game's files.
+    for unit_id in sorted(unit_ids):
+        spec = specs.get(unit_id)
+        has_reach = spec and (spec.get("engagement_range") or spec.get("ai_engagement_range") or spec.get("ai_gun_range"))
+        if has_reach or (spec and spec.get("sensors")):
+            continue
+        found = extras.unit_from_game(dm, unit_id)
+        if found and (found.get("engagement_range") or found.get("ai_gun_range") or not spec):
+            specs[unit_id] = {**(spec or {}), **{key: value for key, value in found.items() if value}}
     units = {
         unit_id: pack_unit(specs.get(unit_id, {"unit_class": unit_id}), names.get(unit_id), weapon_names)
         for unit_id in sorted(unit_ids)
@@ -603,13 +615,6 @@ def main() -> int:
             for site in variant["sites"]:
                 for placement in site["units"]:
                     roles.setdefault(placement["u"], placement.get("r", ""))
-    for unit_id, unit in units.items():
-        # Air defence the reference has no weapon data for: read the gun from the game.
-        if not any(unit.get(key) for key in ("eng", "ai_eng", "gun")) and "spaa" in roles.get(unit_id, "") + unit.get("type", "").lower():
-            found = extras.gun_range(dm, unit_id)
-            if found:
-                unit["gun"] = r1(found[0])
-                unit.setdefault("w", [{"n": weapon_names.get(found[1], found[1]), "max": found[0]}])
     for unit_id, unit in units.items():
         unit["it"] = extras.unit_icon_type(unit_id, specs.get(unit_id, {"unit_class": unit_id}), roles.get(unit_id, ""))
     dump(out / "icons.json", extras.map_icons(dm))

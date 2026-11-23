@@ -279,36 +279,140 @@ def unit_icon_type(unit_id: str, spec: dict, role: str = "") -> str:
     return "tank"
 
 
-def gun_range(dm: Datamine, unit_id: str) -> tuple[float, str] | None:
-    """A ground unit's anti-aircraft gun range read straight from its game files.
+def unit_from_game(dm: Datamine, unit_id: str) -> dict | None:
+    """Basic facts about a ground unit read straight from its game files.
 
-    Used when the reference extraction has no weapon data for a unit. The
-    gun's ``attackMaxDist`` (how far the AI opens fire) is preferred, then its
-    ``aimMaxDist``. Returns (metres, weapon id).
+    Used for units the reference extraction does not cover yet (new or
+    changed in a recent patch). Returns a spec in the reference's shape:
+    ``unit_type``, ``on_radar_as`` and, from the weapon files, the missile
+    reach (``engagement_range``), the AI's firing distance
+    (``ai_engagement_range``) or, for guns only, ``ai_gun_range``.
     """
     base = unit_id.rsplit("/", 1)[-1].lower()
-    folder = "aces.vromfs.bin_u/gamedata/units/tankmodels"
-    match = next((path for path in dm.ls(f"{folder}/{base}.blkx")), None)
-    if match is None:
+    path = f"aces.vromfs.bin_u/gamedata/units/tankmodels/{base}.blkx"
+    if not dm.exists(path):
         return None
     try:
-        unit = dm.read_json(match)
+        unit = dm.read_json(path)
     except Exception:
         return None
+    spec: dict = {"unit_class": unit_id, "unit_type": unit.get("type"), "on_radar_as": unit.get("onRadarAs"), "weapons": []}
     weapons = (unit.get("commonWeapons") or {}).get("Weapon") or []
-    if isinstance(weapons, dict):
-        weapons = [weapons]
-    best: tuple[float, str] | None = None
+    weapons = [weapons] if isinstance(weapons, dict) else weapons
+    missile_reach = ai_reach = gun_reach = 0.0
     for weapon in weapons:
         blk = str(weapon.get("blk") or "").replace("\\", "/").lower() if isinstance(weapon, dict) else ""
-        if not blk.startswith("gamedata/weapons/"):
+        if not blk.startswith("gamedata/weapons/") or "dummy" in blk:
             continue
-        path = "aces.vromfs.bin_u/" + blk.removesuffix(".blk") + ".blkx"
         try:
-            data = dm.read_json(path)
+            data = dm.read_json("aces.vromfs.bin_u/" + blk.removesuffix(".blk") + ".blkx")
         except Exception:
             continue
-        reach = data.get("attackMaxDist") or data.get("aimMaxDist")
-        if isinstance(reach, (int, float)) and reach > 0 and (best is None or reach > best[0]):
-            best = (float(reach), blk.rsplit("/", 1)[-1].removesuffix(".blk"))
-    return best
+        bullets = data.get("bullet")
+        bullets = bullets if isinstance(bullets, list) else [bullets] if isinstance(bullets, dict) else []
+        rocket = max((float(b["rocket"].get("rangeMax") or b["rocket"].get("maxDistance") or 0)
+                      for b in bullets if isinstance(b, dict) and isinstance(b.get("rocket"), dict)), default=0.0)
+        attack = float(data.get("attackMaxDist") or data.get("aimMaxDist") or 0)
+        name = blk.rsplit("/", 1)[-1].removesuffix(".blk")
+        if rocket > 0:
+            missile_reach, ai_reach = max(missile_reach, rocket), max(ai_reach, attack)
+            spec["weapons"].append({"name": name, "effective_maximum": rocket})
+        elif attack > 0:
+            gun_reach = max(gun_reach, attack)
+            spec["weapons"].append({"name": name, "effective_maximum": attack})
+    # two identical guns are one weapon to the reader
+    spec["weapons"] = list({weapon["name"]: weapon for weapon in spec["weapons"]}.values())
+    if missile_reach:
+        spec["engagement_range"] = missile_reach
+        if ai_reach:
+            spec["ai_engagement_range"] = ai_reach
+    if gun_reach:
+        spec["ai_gun_range"] = gun_reach
+    return spec
+
+
+FACTORY_FILES = (
+    "aces.vromfs.bin_u/templates/nuclear_escalation/factory_equip.blkx",
+    "aces.vromfs.bin_u/templates/nuclear_escalation/factory_tank.blkx",
+)
+
+
+def convoy_compositions(dm: Datamine) -> dict | None:
+    """Which vehicles make up each convoy, read from the event's factory templates.
+
+    Same shape as the reference extraction:
+    ``{"resource": {era: {"fuel"|"ammo": {"redfor"|"blufor": [entries]}}},
+       "armored": {era: {"standard": {...}, "spg": {...}, "spg_probability": p}}}``
+    with entries ``{"name", "count", "role"}``. Team 1 is "redfor", team 2 "blufor".
+    """
+    templates: dict[str, dict] = {}
+    for path in FACTORY_FILES:
+        try:
+            document = dm.read_json(path)
+        except Exception:
+            return None
+        templates.update({key: value for key, value in document.items() if isinstance(value, dict)})
+
+    def lookup(name: str, wanted: str, seen: set | None = None):
+        """A setting from a template or anything it builds on."""
+        seen = seen or set()
+        if name in seen or name not in templates:
+            return None
+        seen.add(name)
+        template = templates[name]
+        for part in (template, template.get("_group") or {}):
+            for key, value in part.items():
+                if key.split(":", 1)[0] == wanted:
+                    return value
+        bases = template.get("_use") or []
+        for base in [bases] if isinstance(bases, str) else bases:
+            found = lookup(base, wanted, seen)
+            if found is not None:
+                return found
+        return None
+
+    # Vehicles the game classes as anti-aircraft are the columns' escorts.
+    try:
+        wpcost = dm.read_json("char.vromfs.bin_u/config/wpcost.blkx")
+    except Exception:
+        wpcost = {}
+    spaa_ids = {key.lower() for key, entry in wpcost.items() if isinstance(entry, dict) and str(entry.get("unitClass", "")).lower() == "exp_spaa"}
+
+    def entries(value) -> list[dict]:
+        units = (value or {}).get("unit:object") if isinstance(value, dict) else None
+        units = [units] if isinstance(units, dict) else units or []
+        out = []
+        for unit in units:
+            if not isinstance(unit, dict) or not unit.get("name"):
+                continue
+            spaa = "spaa" in str(unit.get("templateName", "")).lower() or str(unit["name"]).lower().rsplit("/", 1)[-1] in spaa_ids
+            out.append({"name": str(unit["name"]), "count": int(unit.get("count", 1) or 1),
+                        "role": "SPAA escort" if spaa else "vehicle"})
+        return out
+
+    def sides(template: str, prefix: str) -> dict:
+        return {"redfor": entries(lookup(template, f"{prefix}1")), "blufor": entries(lookup(template, f"{prefix}2"))}
+
+    resource: dict = {}
+    armored: dict = {}
+    for name in sorted(templates):
+        match = re.match(r"^(fuel|ammo|tank)_factory_(.+)$", name)
+        if not match or match.group(2).endswith("common"):
+            continue
+        kind, era = match.groups()
+        if kind in ("fuel", "ammo"):
+            columns = sides(name, "equip_factory__columnUnitsSettings")
+            if columns["redfor"] or columns["blufor"]:
+                resource.setdefault(era, {})[kind] = columns
+        else:
+            standard = sides(name, "equip_factory__columnUnitsSettings")
+            spg = sides(name, "tank_factory__spgColumnUnitsSettings")
+            # (the game spells this setting "spgColummProbability")
+            probability = next((value for key in ("tank_factory__spgColummProbability", "tank_factory__spgColumnProbability", "tank_factory__spgProbability")
+                                if isinstance(value := lookup(name, key), (int, float))), None)
+            if standard["redfor"] or standard["blufor"]:
+                armored[era] = {"standard": standard, "spg": spg,
+                                "spg_probability": probability if isinstance(probability, (int, float)) else None}
+    if not resource or not armored:
+        return None
+    return {"resource": resource, "armored": armored}

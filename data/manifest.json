@@ -15,8 +15,8 @@
  ],
  "files": {
   "core.json": {
-   "sha256": "9d274c64a9cac316387251ede1d6e2572535b28f30e09a51466f9e78610c9574",
-   "bytes": 247784
+   "sha256": "a19c2ab1394b56e332978fdac731fd357692f9c497913dd711278509d268b14a",
+   "bytes": 248488
   },
   "icons.json": {
    "sha256": "ff3279c105714efc182c469d642c21b47ea90f2060ed1d8730aa3e66ebde2871",
@@ -190,6 +190,10 @@
    "sha256": "127becf32e9c8350d9f881e589b3eb5e87bbfc4a4ff1edee8ce8c9347abb7e27",
    "bytes": 8314
   },
+  "units/germ_flarakrad.webp": {
+   "sha256": "2875c80cc69ccadc5492149032e166bf777c84e853660da30e28b7b0e44b67f5",
+   "bytes": 1748
+  },
   "units/hq_11.webp": {
    "sha256": "297d27f7c858dc767d97c58e8f652288373fe6a9930662c5766e60397aae454f",
    "bytes": 10178
@@ -313,6 +317,10 @@
   "units/slot_germ_flarakpz_1.webp": {
    "sha256": "59f10c543a2150572714a61dbc713938f5641469e419b0224f654c7f6f079bc7",
    "bytes": 2012
+  },
+  "units/slot_germ_flarakrad.webp": {
+   "sha256": "27ee2d2e0bd134433e9cca287d3533212541d65c5f823fd08567cb9b5eb1c042",
+   "bytes": 2132
   },
   "units/slot_germ_pzh_2000.webp": {
    "sha256": "52b3358f8264142b8362b0494d50e641f8a1c4523ebe48641549cb2c418ff036",
@@ -681,5 +689,5 @@
    "sha": "40ca7c509c04fc39eb6bd3a82b7b6b7cebcd70e6"
   }
  ],
- "generated": "2026-11-21T12:59:48Z"
+ "generated": "2026-11-23T14:54:40Z"
 }
