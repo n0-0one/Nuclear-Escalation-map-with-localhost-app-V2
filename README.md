@@ -11,7 +11,9 @@ It reads what the game itself reports while you play and turns it into a plannin
 | | |
 |---|---|
 | **Knows your battle** | Works out the map, your team and the BR bracket by itself within seconds of spawning. You can override any of them from the top bar. |
-| **Tracks what is destroyed** | Reads the in-game kill feed and watches the map. A destroyed SAM launcher is crossed out and its range ring disappears. Each call is labelled *confirmed*, *probable* or *marked by you*. |
+| **Tracks what is destroyed** | Reads the in-game kill feed and watches the map. A destroyed SAM launcher is crossed out and its range ring disappears. Each call is labelled *confirmed*, *probable* or *marked by you*. When the feed names a unit type but not which one, the places it can still be get a "?" until the rest are seen alive. A ship or SAM site whose weapons are all gone is shown as out of action. |
+| **Follows ships** | Warships sail their patrol routes. Seen ships are drawn where they are; unseen ones where they should be by now (dashed ring), using the speed measured while they were visible. Sunk ships are crossed out. |
+| **Notices captured sites** | When friendly or enemy AI takes a depot, strongpoint or airfield, the site changes colour and is labelled *taken by you* or *taken by enemy*. You can also set the owner by hand. |
 | **Follows enemy columns** | Supply and armoured columns are followed while visible. When they are no longer spotted, the app keeps estimating where they are along their road and shows how sure it is. |
 | **Points out strike targets** | When a column drives next to a depot or strongpoint, that area lights up softly on the map and in the mini map, with a countdown before it happens. |
 | **Shows where you are hidden** | Terrain cover: the parts of the map where enemy air defence can actually see you at your current altitude, with hills and mountains blocking the rest. |
@@ -71,7 +73,8 @@ Gaijin can change or restrict that local page at any time. If they do, the app s
 
 - **Aiming points are placed by you.** The game only accepts aiming points from mouse clicks on its own tactical map; it offers no way for another program to set them, and faking your mouse would break the "one key, one action" rule. The app does the next best thing: it tells you exactly which sites to click, in order.
 - **Enemy units are only on your map while a teammate or friendly radar detects them.** So "left the map" does not always mean "destroyed". The app only calls a unit destroyed when the kill feed names it, or when it vanishes while its neighbours stay visible.
-- **Estimated columns are estimates.** The amber band on the road shows how far off the position may be.
+- **Estimated columns and ships are estimates.** The amber band on the road shows how far off a column may be; a dashed ring marks a ship that is not on the map right now.
+- **The game's map can be slightly off.** Icons on the game's map are not always exactly over the unit; the app learns that offset during the battle so kills are still put on the right unit.
 - **Blast radius is your setting.** The game files give each bomb's yield but not its blast radius.
 - This build has been tested against a simulated battle built from the real mission data, not yet against every situation in a real match. If something looks wrong, use *Settings → Record this battle to a file* and attach the file to an issue.
 

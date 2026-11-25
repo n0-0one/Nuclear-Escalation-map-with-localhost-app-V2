@@ -32,7 +32,17 @@ The mission only shows an enemy unit while a friendly unit or radar detects it, 
 2. the kill feed names that unit type **and** one such unit just left the map while its neighbours stayed visible, or only one exists - *confirmed*;
 3. it left the map while neighbours in the same site stayed visible for longer than detection lingers - *probable*.
 
-A kill the app cannot place yet is kept and matched later. A unit that shows up again is alive again, whatever was decided before. Units the mission restores on a timer show when they may be back.
+A kill the app cannot place yet is kept and matched later: as soon as every unit of that type but one has been seen alive since the kill, the remaining one is called *probable* (process of elimination). Until then the places it can still be are listed in the log and, when there are only a few, marked "?" on the map. A unit that shows up again is alive again, whatever was decided before. Units the mission restores on a timer show when they may be back.
+
+Icons on the game's map are matched to mission units one to one, nearest first. The game sometimes draws every icon shifted by the same few dozen metres; the app measures that shift from all matched icons and takes it off before matching, so a kill is put on the right unit even then.
+
+## Ships
+
+Warships sail closed patrol routes from the mission. A ship on your map is followed and its real speed measured. When it drops off, it keeps moving along its route at that speed (dashed ring). A ship never seen is placed from the battle clock. A ship that vanishes while nearby units stay visible, or that the kill feed names, is marked sunk.
+
+## Captured sites
+
+Depots, strongpoints, assembly areas and airfields can be taken by AI columns. When icons of the other side sit on a site's unit positions for a few seconds, the site changes hands: its colour, the alerts and the strike targets follow the new owner. You can set the owner by hand in the site's details.
 
 ## Columns
 

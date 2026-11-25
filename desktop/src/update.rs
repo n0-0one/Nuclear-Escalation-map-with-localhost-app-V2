@@ -42,14 +42,21 @@ pub fn read_manifest(dir: &Path) -> Option<Manifest> {
 }
 
 fn sha256_hex(bytes: &[u8]) -> String {
-    Sha256::digest(bytes).iter().map(|b| format!("{b:02x}")).collect()
+    Sha256::digest(bytes)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
 }
 
 /// Pack file names are plain relative paths; anything else is rejected.
 fn safe_relative(path: &str) -> Option<PathBuf> {
     let candidate = Path::new(path);
-    let plain = candidate.components().all(|c| matches!(c, Component::Normal(_)));
-    let tame = path.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '/' | '.' | '_' | '-'));
+    let plain = candidate
+        .components()
+        .all(|c| matches!(c, Component::Normal(_)));
+    let tame = path
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '/' | '.' | '_' | '-'));
     (plain && tame && !path.is_empty() && path.len() < 200).then(|| candidate.to_path_buf())
 }
 
@@ -68,10 +75,16 @@ fn download(agent: &ureq::Agent, url: &str, limit: u64) -> Result<Vec<u8>, Strin
     let response = agent.get(url).call().map_err(|e| match e {
         ureq::Error::Status(404, _) => "No published map data was found yet.".to_string(),
         ureq::Error::Status(code, _) => format!("The update server answered with error {code}."),
-        ureq::Error::Transport(_) => "Could not reach the update server. Check your internet connection.".to_string(),
+        ureq::Error::Transport(_) => {
+            "Could not reach the update server. Check your internet connection.".to_string()
+        }
     })?;
     let mut body = Vec::new();
-    response.into_reader().take(limit + 1).read_to_end(&mut body).map_err(|e| e.to_string())?;
+    response
+        .into_reader()
+        .take(limit + 1)
+        .read_to_end(&mut body)
+        .map_err(|e| e.to_string())?;
     if body.len() as u64 > limit {
         return Err("A downloaded file was larger than allowed.".into());
     }
@@ -88,15 +101,21 @@ pub enum Outcome {
 pub fn update(current: &Path, root: &Path) -> Result<Outcome, String> {
     let agent = agent()?;
     let manifest_bytes = download(&agent, &format!("{FEED}manifest.json"), 1024 * 1024)?;
-    let manifest: Manifest = serde_json::from_slice(&manifest_bytes).map_err(|_| "The published manifest could not be read.".to_string())?;
+    let manifest: Manifest = serde_json::from_slice(&manifest_bytes)
+        .map_err(|_| "The published manifest could not be read.".to_string())?;
     if manifest.schema != ntl_engine::pack::SCHEMA {
         return Ok(Outcome::NeedsNewerApp);
     }
     let have = read_manifest(current);
-    if have.as_ref().is_some_and(|m| m.generated >= manifest.generated) {
+    if have
+        .as_ref()
+        .is_some_and(|m| m.generated >= manifest.generated)
+    {
         return Ok(Outcome::UpToDate);
     }
-    if manifest.files.values().map(|f| f.bytes).sum::<u64>() > MAX_TOTAL || manifest.files.len() > 2000 {
+    if manifest.files.values().map(|f| f.bytes).sum::<u64>() > MAX_TOTAL
+        || manifest.files.len() > 2000
+    {
         return Err("The published data pack is larger than allowed.".into());
     }
 
@@ -105,7 +124,8 @@ pub fn update(current: &Path, root: &Path) -> Result<Outcome, String> {
     std::fs::create_dir_all(&staging).map_err(|e| e.to_string())?;
     let result = (|| -> Result<(), String> {
         for (name, entry) in &manifest.files {
-            let relative = safe_relative(name).ok_or("The published data pack lists an invalid file name.")?;
+            let relative =
+                safe_relative(name).ok_or("The published data pack lists an invalid file name.")?;
             if entry.bytes > MAX_FILE {
                 return Err("A published file is larger than allowed.".into());
             }
@@ -121,7 +141,9 @@ pub fn update(current: &Path, root: &Path) -> Result<Outcome, String> {
                 None => {
                     let bytes = download(&agent, &format!("{FEED}{name}"), MAX_FILE)?;
                     if sha256_hex(&bytes) != entry.sha256 {
-                        return Err(format!("{name} did not match its checksum; the update was discarded."));
+                        return Err(format!(
+                            "{name} did not match its checksum; the update was discarded."
+                        ));
                     }
                     bytes
                 }
@@ -132,8 +154,11 @@ pub fn update(current: &Path, root: &Path) -> Result<Outcome, String> {
             }
             std::fs::write(&target, bytes).map_err(|e| e.to_string())?;
         }
-        std::fs::write(staging.join("manifest.json"), &manifest_bytes).map_err(|e| e.to_string())?;
-        Pack::load(&staging).map_err(|e| format!("The new data did not pass its checks ({e}); keeping the current data."))?;
+        std::fs::write(staging.join("manifest.json"), &manifest_bytes)
+            .map_err(|e| e.to_string())?;
+        Pack::load(&staging).map_err(|e| {
+            format!("The new data did not pass its checks ({e}); keeping the current data.")
+        })?;
         Ok(())
     })();
     if let Err(error) = result {
@@ -147,7 +172,9 @@ pub fn update(current: &Path, root: &Path) -> Result<Outcome, String> {
     }
     std::fs::rename(&staging, &live).map_err(|e| e.to_string())?;
     let _ = std::fs::remove_dir_all(&old);
-    Ok(Outcome::Downloaded { game_version: manifest.game_version })
+    Ok(Outcome::Downloaded {
+        game_version: manifest.game_version,
+    })
 }
 
 #[cfg(test)]
@@ -165,6 +192,9 @@ mod tests {
 
     #[test]
     fn checksum_is_lowercase_hex() {
-        assert_eq!(sha256_hex(b"abc"), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+        assert_eq!(
+            sha256_hex(b"abc"),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
     }
 }

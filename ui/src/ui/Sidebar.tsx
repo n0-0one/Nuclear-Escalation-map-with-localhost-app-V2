@@ -77,7 +77,7 @@ function Defence({ s, v }: { s: Snapshot; v: Variant }) {
   const states = siteStates.value;
   const hit = v.sites
     .map((site, si) => ({ site, si, state: states.get(si)! }))
-    .filter(({ site, state }) => site.team === enemy && state && state.total > 0 && state.alive < state.total)
+    .filter(({ state }) => state && state.owner === enemy && state.total > 0 && state.alive < state.total)
     .sort((a, b) => a.state.alive / a.state.total - b.state.alive / b.state.total);
   return (
     <>
@@ -88,9 +88,11 @@ function Defence({ s, v }: { s: Snapshot; v: Variant }) {
       <h3>Destroyed or damaged</h3>
       {hit.length === 0 && <Empty>Nothing on the enemy side has been knocked out yet.</Empty>}
       {hit.map(({ site, si, state }) => (
-        <button class={`card state ${state.destroyed ? "dead" : ""}`} key={si} onClick={() => go(si, v)}>
+        <button class={`card state ${state.destroyed || state.disarmed ? "dead" : ""}`} key={si} onClick={() => go(si, v)}>
           <b>{siteName(site)}</b>
-          <span>{state.destroyed ? "Destroyed" : `${state.total - state.alive} of ${state.total} destroyed`}</span>
+          <span>
+            {state.destroyed ? (site.cat === "ship" ? "Sunk" : "Destroyed") : state.disarmed ? "All weapons destroyed" : `${state.total - state.alive} of ${state.total} destroyed`}
+          </span>
         </button>
       ))}
     </>
@@ -141,7 +143,22 @@ function Log({ s, v }: { s: Snapshot; v: Variant }) {
   return (
     <>
       <h3>Battle log</h3>
-      {s.battle.unlocated_kills > 0 && <p class="hint">{s.battle.unlocated_kills} kill{s.battle.unlocated_kills > 1 ? "s" : ""} reported for units whose position is not known yet.</p>}
+      {(s.suspects?.length ?? 0) > 0 && (
+        <>
+          <p class="hint">Kills the game reported where it is not known yet which unit it was. Places it can still be are marked "?" on the map (when there are a few); the app settles it once the others are seen alive.</p>
+          <div class="list">
+            {s.suspects!.map((sus, i) => {
+              const first = sus.units[0];
+              return (
+                <button class="line log maybe" key={i} disabled={!first} onClick={() => first && go(first[0], v)}>
+                  <span class="num">{clock(Math.max(0, (s.battle.clock_s ?? 0) - sus.ago_s))}</span>
+                  <span>{sus.name} destroyed · {sus.count === 0 ? "no known place left" : sus.count === 1 ? "one place left" : `one of ${sus.count} places`}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
       {s.log.length === 0 && <Empty>Nothing yet.</Empty>}
       <div class="list">
         {s.log.map((entry, i) => (
@@ -161,10 +178,14 @@ function SiteDetail({ index, v }: { index: number; v: Variant }) {
   const c = core.value!;
   const live = isLive.value;
   const state = siteStates.value.get(index);
-  const enemy = site.team === enemyTeam.value;
+  const owner = state?.owner ?? site.team;
+  const enemy = owner === enemyTeam.value;
   const groups = unitGroups(site, index);
   const reach = Math.max(0, ...groups.map((g) => g.spec?.eng ?? g.spec?.ai_eng ?? g.spec?.gun ?? 0), ...site.units.map((u) => u.tr ?? 0));
   const radar = Math.max(0, ...groups.map((g) => g.spec?.det ?? 0));
+  const capturable = ["strongpoint", "assembly_area", "fuel_factory", "ammo_factory", "airfield"].includes(site.cat);
+  const capture = (team: number | null) => command("capture", { site: index, ...(team !== null ? { team } : {}) });
+  const myTeam = 3 - enemyTeam.value;
   const mark = (slot: number | null, destroyed: boolean | null) =>
     command("mark", { site: index, ...(slot !== null ? { slot } : {}), ...(destroyed !== null ? { destroyed } : {}) });
   const schedule = snapshot.value?.schedules.find((s) => s.site === index);
@@ -172,12 +193,26 @@ function SiteDetail({ index, v }: { index: number; v: Variant }) {
   return (
     <div class="detail">
       <button class="back" onClick={() => (selected.value = null)}>{Icon.back} Back</button>
-      <span class={`tag ${enemy ? "enemy" : "friendly"}`}>{enemy ? "Enemy" : "Friendly"} · {TEAM_NAME[site.team]}</span>
+      <span class={`tag ${enemy ? "enemy" : "friendly"}`}>{enemy ? "Enemy" : "Friendly"} · {TEAM_NAME[owner]}</span>
+      {state?.captured && <span class="tag captured">Captured{state.captureProof === "manual" ? " (marked by you)" : ""}</span>}
       <h2>{siteName(site)}</h2>
       {live && state && state.total > 0 && (
-        <div class={`status ${state.destroyed ? "dead" : state.alive < state.total ? "hit" : "ok"}`}>
-          {state.destroyed ? "Destroyed" : state.alive < state.total ? `${state.total - state.alive} of ${state.total} destroyed` : state.visible > 0 ? "Intact · on the map now" : "No losses seen"}
+        <div class={`status ${state.destroyed || state.disarmed ? "dead" : state.alive < state.total ? "hit" : "ok"}`}>
+          {state.destroyed
+            ? site.cat === "ship" ? "Sunk" : "Destroyed"
+            : state.disarmed
+              ? "All weapons destroyed · no longer a threat"
+              : state.alive < state.total ? `${state.total - state.alive} of ${state.total} destroyed` : state.visible > 0 ? "Intact · on the map now" : "No losses seen"}
         </div>
+      )}
+      {live && state?.ship && !state.ship.destroyed && (
+        <p class="hint">
+          {state.ship.state === "observed"
+            ? "On the map now."
+            : state.ship.state === "predicted"
+              ? `Not on the map for ${clock(state.ship.unseen_s ?? 0)}; shown where it should be along its route.`
+              : "Not seen yet; shown where it should be from the battle clock."}
+        </p>
       )}
       <dl class="facts">
         {reach > 0 && (<><dt>Weapon reach</dt><dd>{km(reach)}</dd></>)}
@@ -216,10 +251,24 @@ function SiteDetail({ index, v }: { index: number; v: Variant }) {
       </div>
       {live && groups.length > 0 && (
         <div class="actions">
-          <button onClick={() => mark(null, true)}>Whole site destroyed</button>
-          <button onClick={() => mark(null, false)}>Whole site alive</button>
+          <button onClick={() => mark(null, true)}>{site.cat === "ship" ? "Sunk" : "Whole site destroyed"}</button>
+          <button onClick={() => mark(null, false)}>{site.cat === "ship" ? "Afloat" : "Whole site alive"}</button>
           <button onClick={() => mark(null, null)}>Clear my marks</button>
         </div>
+      )}
+      {live && capturable && (
+        <>
+          <h3>Who holds it</h3>
+          <p class="hint">
+            Columns of tanks take depots, strongpoints and airfields once their defenders are gone. The app notices when the
+            other side's vehicles hold the positions; you can also set it here.
+          </p>
+          <div class="actions">
+            {owner !== myTeam && <button onClick={() => capture(myTeam)}>Taken by your side</button>}
+            {owner === myTeam && <button onClick={() => capture(3 - myTeam)}>Taken by the enemy</button>}
+            {(state?.captured || state?.captureProof === "manual") && <button onClick={() => capture(null)}>Back to original owner</button>}
+          </div>
+        </>
       )}
     </div>
   );
@@ -283,7 +332,7 @@ function UnitHoverCard({ siteIndex, slot, at, v }: { siteIndex: number; slot: nu
   const c = core.value;
   if (!placement || !c) return null;
   const spec = c.units[placement.u];
-  const enemy = site.team === enemyTeam.value;
+  const enemy = (siteStates.value.get(siteIndex)?.owner ?? site.team) === enemyTeam.value;
   const unit = isLive.value ? siteStates.value.get(siteIndex)?.units.get(slot) : undefined;
   const dead = unit?.[0] === "destroyed";
   const player = isLive.value ? snapshot.value?.player : null;
@@ -330,7 +379,8 @@ export function HoverCard() {
   const site = v.sites[index];
   const live = isLive.value;
   const state = siteStates.value.get(index);
-  const enemy = site.team === enemyTeam.value;
+  const enemy = (state?.owner ?? site.team) === enemyTeam.value;
+  const here = state?.p ?? site.p;
   const groups = unitGroups(site, index);
   const reach = Math.max(0, ...groups.map((g) => g.spec?.eng ?? g.spec?.ai_eng ?? g.spec?.gun ?? 0), ...site.units.map((u) => u.tr ?? 0));
   const player = isLive.value ? snapshot.value?.player : null;
@@ -340,15 +390,15 @@ export function HoverCard() {
   const top = Math.max(8, Math.min(at.y - 20, window.innerHeight - height - 8));
   return (
     <div class="hover material" style={{ left: `${left}px`, top: `${top}px`, width: `${width}px` }}>
-      <span class={`tag ${enemy ? "enemy" : "friendly"}`}>{enemy ? "Enemy" : "Friendly"}</span>
+      <span class={`tag ${enemy ? "enemy" : "friendly"}`}>{enemy ? "Enemy" : "Friendly"}{state?.captured ? " · captured" : ""}</span>
       <b class="hover-title">{siteName(site)}</b>
       <span class="hover-sub">
-        {player ? `${km(Math.hypot(site.p[0] - player.p[0], site.p[1] - player.p[1]))} from you · ` : ""}
+        {player ? `${km(Math.hypot(here[0] - player.p[0], here[1] - player.p[1]))} from you · ` : ""}
         {reach > 0 ? `Reach ${km(reach)}` : ""}
         {live && state && state.total > 0 && (
-          <em class={state.destroyed ? "dead" : state.alive < state.total ? "hit" : ""}>
+          <em class={state.destroyed || state.disarmed ? "dead" : state.alive < state.total ? "hit" : ""}>
             {reach > 0 ? " · " : ""}
-            {state.destroyed ? "Destroyed" : state.alive < state.total ? `${state.total - state.alive} of ${state.total} destroyed` : "Intact"}
+            {state.destroyed ? (site.cat === "ship" ? "Sunk" : "Destroyed") : state.disarmed ? "Weapons destroyed" : state.alive < state.total ? `${state.total - state.alive} of ${state.total} destroyed` : "Intact"}
           </em>
         )}
       </span>

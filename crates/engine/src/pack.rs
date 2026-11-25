@@ -211,10 +211,16 @@ pub struct Site {
 
 impl Site {
     pub fn is_depot(&self) -> bool {
-        matches!(self.cat.as_str(), "assembly_area" | "fuel_factory" | "ammo_factory")
+        matches!(
+            self.cat.as_str(),
+            "assembly_area" | "fuel_factory" | "ammo_factory"
+        )
     }
     pub fn is_air_defence(&self) -> bool {
-        matches!(self.cat.as_str(), "long_sam" | "short_sam" | "sam_cover" | "spaa_cover")
+        matches!(
+            self.cat.as_str(),
+            "long_sam" | "short_sam" | "sam_cover" | "spaa_cover"
+        )
     }
 }
 
@@ -314,7 +320,10 @@ impl Pack {
     pub fn load(dir: &Path) -> Result<Pack, PackError> {
         let core: Core = read_json(&dir.join("core.json"))?;
         if core.schema != SCHEMA {
-            return Err(PackError(format!("data pack schema {} is not supported (expected {SCHEMA})", core.schema)));
+            return Err(PackError(format!(
+                "data pack schema {} is not supported (expected {SCHEMA})",
+                core.schema
+            )));
         }
         if core.eras.is_empty() || core.eras.len() > 30 {
             return Err(PackError("data pack lists no BR brackets".into()));
@@ -325,8 +334,13 @@ impl Pack {
             if reference.file.contains("..") || reference.file.starts_with('/') {
                 continue;
             }
-            let Ok(mut level) = read_json::<Level>(&dir.join(&reference.file)) else { continue };
-            if level.variants.is_empty() || level.bounds[2] <= level.bounds[0] || level.bounds[3] <= level.bounds[1] {
+            let Ok(mut level) = read_json::<Level>(&dir.join(&reference.file)) else {
+                continue;
+            };
+            if level.variants.is_empty()
+                || level.bounds[2] <= level.bounds[0]
+                || level.bounds[3] <= level.bounds[1]
+            {
                 continue;
             }
             if let Some(name) = level.roads.clone() {
@@ -341,7 +355,11 @@ impl Pack {
         if levels.is_empty() {
             return Err(PackError("data pack contains no usable map".into()));
         }
-        Ok(Pack { dir: dir.to_path_buf(), core, levels })
+        Ok(Pack {
+            dir: dir.to_path_buf(),
+            core,
+            levels,
+        })
     }
 
     pub fn level(&self, id: &str) -> Option<&Level> {

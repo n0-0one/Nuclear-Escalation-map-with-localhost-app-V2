@@ -68,7 +68,9 @@ impl RoadGraph {
                         if road_of[other as usize] == road_of[index as usize] {
                             continue;
                         }
-                        if (heights[other as usize] - heights[index as usize]).abs() > MAX_HEIGHT_GAP_M {
+                        if (heights[other as usize] - heights[index as usize]).abs()
+                            > MAX_HEIGHT_GAP_M
+                        {
                             continue;
                         }
                         let d = graph.nodes[other as usize].dist(p);
@@ -102,7 +104,10 @@ impl RoadGraph {
             if tri.iter().any(|&i| (i as usize) * 2 + 1 >= vertices.len()) {
                 continue;
             }
-            let centre = vertex(tri[0]).add(vertex(tri[1])).add(vertex(tri[2])).scale(1.0 / 3.0);
+            let centre = vertex(tri[0])
+                .add(vertex(tri[1]))
+                .add(vertex(tri[2]))
+                .scale(1.0 / 3.0);
             let node = self.nodes.len() as u32;
             self.nodes.push(centre);
             self.edges.push(Vec::new());
@@ -142,7 +147,12 @@ impl RoadGraph {
     /// Route from `from` to `to`. Falls back to a straight line when there is
     /// no road network or the points are not connected by one.
     pub fn route(&mut self, from: V2, to: V2) -> Path {
-        let key = (from.0.round() as i64, from.1.round() as i64, to.0.round() as i64, to.1.round() as i64);
+        let key = (
+            from.0.round() as i64,
+            from.1.round() as i64,
+            to.0.round() as i64,
+            to.1.round() as i64,
+        );
         if !self.cache.contains_key(&key) {
             let found = self.search(from, to);
             self.cache.insert(key, found);
@@ -184,7 +194,10 @@ impl RoadGraph {
                 if candidate < dist[next as usize] {
                     dist[next as usize] = candidate;
                     prev[next as usize] = current;
-                    open.push(Open(candidate + self.nodes[next as usize].dist(goal_point), next));
+                    open.push(Open(
+                        candidate + self.nodes[next as usize].dist(goal_point),
+                        next,
+                    ));
                 }
             }
         }
@@ -221,7 +234,10 @@ mod tests {
     use crate::pack::Road;
 
     fn road(points: &[(f64, f64)]) -> Road {
-        Road { s: "asphalt".into(), p: points.iter().flat_map(|&(x, z)| [x, 0.0, z]).collect() }
+        Road {
+            s: "asphalt".into(),
+            p: points.iter().flat_map(|&(x, z)| [x, 0.0, z]).collect(),
+        }
     }
 
     #[test]
@@ -235,16 +251,29 @@ mod tests {
         };
         let mut graph = RoadGraph::build(&file);
         let path = graph.route(V2(0.0, 10.0), V2(2000.0, 2000.0));
-        assert!(path.pts.len() >= 6, "expected a road path, got {:?}", path.pts);
+        assert!(
+            path.pts.len() >= 6,
+            "expected a road path, got {:?}",
+            path.pts
+        );
         assert!(path.length() > 3900.0 && path.length() < 4100.0);
-        assert!(path.pts.iter().any(|p| p.dist(V2(2000.0, 0.0)) < 20.0), "must pass the corner");
+        assert!(
+            path.pts.iter().any(|p| p.dist(V2(2000.0, 0.0)) < 20.0),
+            "must pass the corner"
+        );
     }
 
     #[test]
     fn falls_back_to_a_straight_line() {
         let mut empty = RoadGraph::build(&RoadFile::default());
         assert_eq!(empty.route(V2(0.0, 0.0), V2(5.0, 5.0)).pts.len(), 2);
-        let file = RoadFile { roads: vec![road(&[(0.0, 0.0), (100.0, 0.0)]), road(&[(9000.0, 0.0), (9100.0, 0.0)])], navmesh: None };
+        let file = RoadFile {
+            roads: vec![
+                road(&[(0.0, 0.0), (100.0, 0.0)]),
+                road(&[(9000.0, 0.0), (9100.0, 0.0)]),
+            ],
+            navmesh: None,
+        };
         let mut split = RoadGraph::build(&file);
         assert_eq!(split.route(V2(0.0, 0.0), V2(9100.0, 0.0)).pts.len(), 2);
     }

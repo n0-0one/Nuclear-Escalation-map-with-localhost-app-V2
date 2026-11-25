@@ -59,7 +59,7 @@ export interface Convoy {
 export interface Alert { id: string; kind: "stack" | "attack"; phase: "now" | "soon"; site: number; convoy: number; p: V2; r: number; count: number; eta_s: number; uncertain: boolean }
 export interface Opportunity { p: V2; r: number; count: number; friendly: number; site: number | null; convoys: number[] }
 export interface Cue { site: number; p: V2; dist_m: number; bearing: number; relative: number | null; reach_m: number; inside: boolean; alive: number; total: number; grid: string | null }
-export interface LogEntry { at: number; battle_t: number | null; kind: "kill" | "lost" | "info"; text: string; site: number | null }
+export interface LogEntry { at: number; battle_t: number | null; kind: "kill" | "lost" | "info" | "capture"; text: string; site: number | null }
 export interface Battle {
   level: string | null; variant: string | null; team: number | null; era: string | null;
   level_conf: Conf; side_conf: Conf; era_conf: Conf; era_options: string[]; why: string[];
@@ -73,4 +73,11 @@ export interface Snapshot {
   schedules: { site: number; next_in: [number, number]; locked: boolean }[];
   log: LogEntry[]; settings: Settings; demo: { speed: number; t: number } | null; recording: string | null;
   diag: Record<string, unknown>;
+  /** Sites that changed hands: [site, owner, how we know]. */
+  owners?: [number, number, Proof][];
+  ships?: ShipView[];
+  suspects?: Suspect[];
 }
+/** A kill-feed line whose unit is not known yet, and the units it can still be. */
+export interface Suspect { name: string; ago_s: number; count: number; units: [number, number][] }
+export interface ShipView { site: number; p: V2; dir: V2; state: "observed" | "predicted" | "estimated"; unseen_s: number | null; destroyed: boolean }

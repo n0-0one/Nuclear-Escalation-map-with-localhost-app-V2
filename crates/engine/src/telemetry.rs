@@ -150,7 +150,11 @@ pub fn parse_map_obj(text: &str) -> Option<Vec<MapObj>> {
     let mut out = Vec::with_capacity(items.len().min(4096));
     for item in items.iter().take(4096) {
         let type_name = item.get("type").and_then(Value::as_str).unwrap_or("");
-        let icon = item.get("icon").and_then(Value::as_str).unwrap_or("").to_string();
+        let icon = item
+            .get("icon")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string();
         let kind = match type_name {
             "aircraft" => Kind::Aircraft,
             "ground_model" => Kind::Ground,
@@ -160,7 +164,12 @@ pub fn parse_map_obj(text: &str) -> Option<Vec<MapObj>> {
             _ => Kind::Other,
         };
         let (x, y, ex, ey) = if kind == Kind::Airfield {
-            match (num(item, "sx"), num(item, "sy"), num(item, "ex"), num(item, "ey")) {
+            match (
+                num(item, "sx"),
+                num(item, "sy"),
+                num(item, "ex"),
+                num(item, "ey"),
+            ) {
                 (Some(sx), Some(sy), Some(ex), Some(ey)) => (sx, sy, ex, ey),
                 _ => continue,
             }
@@ -204,7 +213,10 @@ pub fn parse_map_info(text: &str) -> Option<Option<MapInfo>> {
         max,
         grid_zero: pair(&value, "grid_zero"),
         grid_steps: pair(&value, "grid_steps"),
-        generation: value.get("map_generation").and_then(Value::as_i64).unwrap_or(0),
+        generation: value
+            .get("map_generation")
+            .and_then(Value::as_i64)
+            .unwrap_or(0),
     }))
 }
 
@@ -214,11 +226,23 @@ pub fn parse_indicators(text: &str) -> Option<Option<Vehicle>> {
     if value.get("valid").and_then(Value::as_bool) != Some(true) {
         return Some(None);
     }
-    let id = value.get("type").and_then(Value::as_str).unwrap_or("").trim().to_lowercase();
+    let id = value
+        .get("type")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim()
+        .to_lowercase();
     if id.is_empty() {
         return Some(None);
     }
-    Some(Some(Vehicle { id, army: value.get("army").and_then(Value::as_str).unwrap_or("").to_string() }))
+    Some(Some(Vehicle {
+        id,
+        army: value
+            .get("army")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string(),
+    }))
 }
 
 /// `/state` - flight data. Keys carry their unit in the name ("H, m").
@@ -238,8 +262,16 @@ pub fn parse_state(text: &str) -> Option<Flight> {
 pub fn parse_hudmsg(text: &str) -> Option<Vec<HudLine>> {
     let value: Value = serde_json::from_str(text).ok()?;
     let mut out = Vec::new();
-    for line in value.get("damage").and_then(Value::as_array).into_iter().flatten().take(500) {
-        let Some(msg) = line.get("msg").and_then(Value::as_str) else { continue };
+    for line in value
+        .get("damage")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .take(500)
+    {
+        let Some(msg) = line.get("msg").and_then(Value::as_str) else {
+            continue;
+        };
         out.push(HudLine {
             id: line.get("id").and_then(Value::as_i64).unwrap_or(0),
             text: msg.chars().take(400).collect(),
@@ -252,7 +284,13 @@ pub fn parse_hudmsg(text: &str) -> Option<Vec<HudLine>> {
 /// `/mission.json` - "running", "success", "fail" or similar.
 pub fn parse_mission(text: &str) -> Option<String> {
     let value: Value = serde_json::from_str(text).ok()?;
-    Some(value.get("status").and_then(Value::as_str).unwrap_or("").to_string())
+    Some(
+        value
+            .get("status")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string(),
+    )
 }
 
 #[cfg(test)]
@@ -280,7 +318,10 @@ mod tests {
 
     #[test]
     fn colour_falls_back_to_hex() {
-        let objects = parse_map_obj(r##"[{"type":"ground_model","color":"#fa0C00","icon":"x","x":0.1,"y":0.1}]"##).unwrap();
+        let objects = parse_map_obj(
+            r##"[{"type":"ground_model","color":"#fa0C00","icon":"x","x":0.1,"y":0.1}]"##,
+        )
+        .unwrap();
         assert_eq!(objects[0].rgb, [250, 12, 0]);
     }
 
@@ -296,11 +337,20 @@ mod tests {
 
     #[test]
     fn reads_vehicle_flight_and_kill_feed() {
-        let vehicle = parse_indicators(r#"{"valid":true,"army":"air","type":"F_16A_Block_10"}"#).unwrap().unwrap();
+        let vehicle = parse_indicators(r#"{"valid":true,"army":"air","type":"F_16A_Block_10"}"#)
+            .unwrap()
+            .unwrap();
         assert_eq!(vehicle.id, "f_16a_block_10");
         let flight = parse_state(r#"{"valid":true,"H, m":5120,"TAS, km/h":930}"#).unwrap();
         assert_eq!(flight.altitude_m, Some(5120.0));
         let lines = parse_hudmsg(r#"{"events":[],"damage":[{"id":7,"msg":"Bot (F-16A) destroyed 2S6","sender":"","enemy":false,"mode":"","time":412}]}"#).unwrap();
-        assert_eq!(lines[0], HudLine { id: 7, text: "Bot (F-16A) destroyed 2S6".into(), time: Some(412.0) });
+        assert_eq!(
+            lines[0],
+            HudLine {
+                id: 7,
+                text: "Bot (F-16A) destroyed 2S6".into(),
+                time: Some(412.0)
+            }
+        );
     }
 }

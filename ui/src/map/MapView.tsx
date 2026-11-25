@@ -205,6 +205,22 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
       const enemy = enemyTeam.value;
       const states = siteStates.value;
       const snap = isLive.value ? snapshot.value : null;
+      // units a reported kill can still be: site -> slots
+      const suspects = new Map<number, Set<number>>();
+      for (const sus of snap?.suspects ?? []) for (const [si, slot] of sus.units) (suspects.get(si) ?? suspects.set(si, new Set()).get(si)!).add(slot);
+      const maybeMark = (x: number, y: number) => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, 6.5, 0, Math.PI * 2);
+        ctx.fillStyle = COLOR.amber;
+        ctx.fill();
+        ctx.fillStyle = COLOR.panel;
+        ctx.font = "700 10px -apple-system, system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("?", x, y + 0.5);
+        ctx.restore();
+      };
       const onScreen = (x: number, y: number, pad = 40) => x > -pad && y > -pad && x < width + pad && y < height + pad;
       const detail = cam.ppm > 0.085; // individual vehicles become readable
       const showConvoys = convoysShown.value, enemyOnly = prefs.value.enemyOnly;
@@ -222,10 +238,11 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
       if (layers.rings) {
         const groups: Record<string, { x: number; y: number; r: number; minor: boolean; si: number }[]> = { enemy: [], friendly: [] };
         v.sites.forEach((site, si) => {
-          const isEnemy = site.team === enemy;
-          if (!siteShown(site)) return;
-          if (site.moves && site.cat !== "ship") return;
           const state = states.get(si);
+          const isEnemy = (state?.owner ?? site.team) === enemy;
+          if (!siteShown(site, si)) return;
+          if (site.moves && site.cat !== "ship") return;
+          if (state?.ship?.destroyed) return;
           let reach = 0, radar = 0;
           site.units.forEach((u, slot) => {
             if (!((u.e >> bit) & 1)) return;
@@ -233,7 +250,8 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
             reach = Math.max(reach, reachOf(u.u), u.tr ?? 0);
             radar = Math.max(radar, c.units[u.u]?.det ?? 0);
           });
-          const px = sx(site.p[0]), py = sy(site.p[1]);
+          const here = state?.p ?? site.p;
+          const px = sx(here[0]), py = sy(here[1]);
           if (reach > 0) {
             const r = reach * cam.ppm;
             if (!(px + r < 0 || py + r < 0 || px - r > width || py - r > height)) {
@@ -307,7 +325,7 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
 
       // --- runways and ship routes
       for (const site of v.sites) {
-        const color = sideColor(site.team === enemy);
+        const color = sideColor((states.get(v.sites.indexOf(site))?.owner ?? site.team) === enemy);
         for (const rw of siteShown(site) ? site.rw ?? [] : []) {
           ctx.beginPath();
           ctx.moveTo(sx(rw[0]), sy(rw[1]));
@@ -409,11 +427,12 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
       };
       for (const si of order) {
         const site = v.sites[si];
-        if (site.cat === "radar_pad" || !siteShown(site)) continue;
+        if (site.cat === "radar_pad" || !siteShown(site, si)) continue;
         const state = states.get(si)!;
         if (state.total === 0 && site.cat !== "airfield") continue;
-        const isEnemy = site.team === enemy;
-        const px = sx(site.p[0]), py = sy(site.p[1]);
+        const isEnemy = state.owner === enemy;
+        const px = sx(state.p[0]), py = sy(state.p[1]);
+        const out = state.destroyed || state.disarmed;
         if (!onScreen(px, py)) continue;
         const minor = isMinor(site.cat);
         const size = (minor ? 6.5 : 11) * (detail ? 0.85 : 1);
@@ -426,7 +445,8 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
           // every vehicle of the site at its mission position
           site.units.forEach((u, slot) => {
             if (!((u.e >> bit) & 1)) return;
-            const ux = sx(u.p[0]), uy = sy(u.p[1]);
+            const at = state.ship ? state.p : u.p;
+            const ux = sx(at[0]), uy = sy(at[1]);
             const unit = state.units.get(slot);
             const dead = unit?.[0] === "destroyed";
             const isHover = hoverUnit?.site === si && hoverUnit.slot === slot;
@@ -463,6 +483,7 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
               ctx.fillStyle = COLOR.ink;
               ctx.fill();
             }
+            if (!dead && suspects.get(si)?.has(slot)) maybeMark(ux + 10, uy - 10);
             if (cam.ppm > 0.3) label(ctx, c.units[u.u]?.s ?? c.units[u.u]?.n ?? u.u, ux, uy + 13, rgba(COLOR.ink, 0.85), 10);
           });
         }
@@ -471,14 +492,31 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
           const marks = {
             enemy: isEnemy, cat: site.cat, size,
             strength: snap ? state.alive / Math.max(1, state.total) : null,
-            total: state.total, destroyed: state.destroyed,
+            total: state.total, destroyed: out,
             selected: selected.value === si, hovered: hovered.value === si, seen: state.visible > 0,
           };
+          if (state.ship && !state.ship.destroyed && state.ship.state !== "observed") {
+            // a ship's estimated position: a dashed circle around the symbol
+            ctx.beginPath();
+            ctx.arc(px, cy, 19, 0, Math.PI * 2);
+            ctx.strokeStyle = rgba(sideColor(isEnemy), 0.75);
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+          if (!out && suspects.has(si)) maybeMark(px + 14, cy - 14);
+          if (state.captured) {
+            // taken from its original owner during the battle
+            label(ctx, isEnemy ? "taken by enemy" : "taken by you", px, cy - 30, isEnemy ? COLOR.hostile : COLOR.friendly, 10.5);
+          }
           if (site.cat === "airfield" && style !== "simple" && site.rw?.length) {
             const longest = site.rw.reduce((a, b) => (Math.hypot(b[2] - b[0], b[3] - b[1]) > Math.hypot(a[2] - a[0], a[3] - a[1]) ? b : a));
-            drawRunwayMark(ctx, px, cy, Math.atan2(-(longest[3] - longest[1]), longest[2] - longest[0]), isEnemy, state.destroyed);
+            drawRunwayMark(ctx, px, cy, Math.atan2(-(longest[3] - longest[1]), longest[2] - longest[0]), isEnemy, out);
             drawSiteMarks(ctx, px, cy, 13, marks);
-          } else if (style !== "simple" && SITE_ICON[site.cat] && symbol(SITE_ICON[site.cat], px, cy, minor ? 20 : 28, isEnemy, state.destroyed)) {
+          } else if (style !== "simple" && site.cat === "ship" && symbol(c.units[site.units.find((u) => (u.e >> bit) & 1)?.u ?? ""]?.it ?? "destroyer", px, cy, 26, isEnemy, out)) {
+            drawSiteMarks(ctx, px, cy, 12, marks);
+          } else if (style !== "simple" && SITE_ICON[site.cat] && symbol(SITE_ICON[site.cat], px, cy, minor ? 20 : 28, isEnemy, out)) {
             drawSiteMarks(ctx, px, cy, minor ? 9 : 13, marks);
           } else {
             drawSite(ctx, px, cy, marks);
@@ -486,7 +524,8 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
         }
         const below = py + (style !== "simple" ? 16 : size + 4);
         if (layers.labels && labelZoom && !minor && !detail) {
-          label(ctx, state.destroyed ? `${siteName(site)} · destroyed` : siteName(site), px, below, state.destroyed ? rgba(COLOR.hostile, 0.95) : rgba(COLOR.ink, 0.85), 11);
+          const status = state.destroyed ? (site.cat === "ship" ? " · sunk" : " · destroyed") : state.disarmed ? " · weapons destroyed" : "";
+          label(ctx, `${siteName(site)}${status}`, px, below, out ? rgba(COLOR.hostile, 0.95) : rgba(COLOR.ink, 0.85), 11);
         }
         if (soonest !== null && labelZoom && (!minor || detail)) {
           // a destroyed unit here comes back on a timer
@@ -659,9 +698,11 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
       let best: { site: number; slot: number } | null = null, bestD = 13;
       v.sites.forEach((site: Site, si) => {
         if (site.cat === "radar_pad" || !siteShown(site)) return;
+        const live = siteStates.value.get(si);
         site.units.forEach((u, slot) => {
           if (!((u.e >> bit) & 1)) return;
-          const d = Math.hypot(sx(u.p[0]) - px, sy(u.p[1]) - py);
+          const at = live?.ship ? live.p : u.p;
+          const d = Math.hypot(sx(at[0]) - px, sy(at[1]) - py);
           if (d < bestD) {
             bestD = d;
             best = { site: si, slot };
@@ -680,7 +721,8 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
         if (site.cat === "radar_pad" || !siteShown(site)) return;
         if ((states.get(si)?.total ?? 0) === 0 && site.cat !== "airfield") return;
         if (lift && isMinor(site.cat)) return;
-        const d = Math.hypot(sx(site.p[0]) - px, sy(site.p[1]) - lift - py) + (isMinor(site.cat) ? 4 : 0);
+        const here = states.get(si)?.p ?? site.p;
+        const d = Math.hypot(sx(here[0]) - px, sy(here[1]) - lift - py) + (isMinor(site.cat) ? 4 : 0);
         if (d < bestD) {
           bestD = d;
           best = si;
@@ -840,13 +882,14 @@ export function MapView({ onCursor }: { onCursor?: (world: [number, number] | nu
         const bit = eraIndex.value, enemy = enemyTeam.value, states = siteStates.value;
         const sites: { x: number; z: number; reach: number }[] = [];
         v.sites.forEach((site, si) => {
-          if (site.team !== enemy || (site.moves && site.cat !== "ship")) return;
           const state = states.get(si);
+          if ((state?.owner ?? site.team) !== enemy || (site.moves && site.cat !== "ship") || state?.ship?.destroyed) return;
           let reach = 0;
           site.units.forEach((u, slot) => {
             if (((u.e >> bit) & 1) && state?.units.get(slot)?.[0] !== "destroyed") reach = Math.max(reach, reachOf(u.u), u.tr ?? 0);
           });
-          if (reach > 0) sites.push({ x: site.p[0], z: site.p[1], reach });
+          const here = state?.p ?? site.p;
+          if (reach > 0) sites.push({ x: here[0], z: here[1], reach });
         });
         const liveAlt = isLive.value ? snapshot.value?.player?.alt_m : null;
         const follow = p.coverLive && liveAlt != null;

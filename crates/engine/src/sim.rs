@@ -85,7 +85,10 @@ struct Plane {
 impl Plane {
     fn at(&self, t: f64) -> (V2, V2) {
         let a = self.phase + t * self.rate;
-        (self.centre.add(V2(a.cos(), a.sin()).scale(self.radius)), V2(-a.sin(), a.cos()).scale(self.rate.signum()))
+        (
+            self.centre.add(V2(a.cos(), a.sin()).scale(self.radius)),
+            V2(-a.sin(), a.cos()).scale(self.rate.signum()),
+        )
     }
 }
 
@@ -124,13 +127,23 @@ pub struct Sim {
 }
 
 impl Sim {
-    pub fn new(pack: Arc<Pack>, level: usize, variant: usize, era: usize, my_team: u8, seed: u64) -> Sim {
+    pub fn new(
+        pack: Arc<Pack>,
+        level: usize,
+        variant: usize,
+        era: usize,
+        my_team: u8,
+        seed: u64,
+    ) -> Sim {
         let mut rng = Rng(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) | 1);
         let lvl = &pack.levels[level];
         let var = &lvl.variants[variant];
         let mut units = Vec::new();
         for (si, site) in var.sites.iter().enumerate() {
-            let ship_route = site.route.as_ref().filter(|r| site.cat == "ship" && r.pts.len() >= 4);
+            let ship_route = site
+                .route
+                .as_ref()
+                .filter(|r| site.cat == "ship" && r.pts.len() >= 4);
             if site.moves.is_some() && ship_route.is_none() {
                 continue;
             }
@@ -139,17 +152,25 @@ impl Sim {
                     continue;
                 }
                 let route = ship_route.map(|r| {
-                    let mut points: Vec<V2> = r.pts.chunks_exact(2).map(|c| V2(c[0], c[1])).collect();
+                    let mut points: Vec<V2> =
+                        r.pts.chunks_exact(2).map(|c| V2(c[0], c[1])).collect();
                     if r.closed {
                         points.push(points[0]);
                     }
                     // ships sail a bit below their top speed
-                    let kph = pack.core.units.get(&placement.u).and_then(|u| u.kph).unwrap_or(40.0);
+                    let kph = pack
+                        .core
+                        .units
+                        .get(&placement.u)
+                        .and_then(|u| u.kph)
+                        .unwrap_or(40.0);
                     (Path::new(points), 0.0, kph / 3.6 * 0.9)
                 });
                 let restore_s = match placement.l.as_deref() {
                     Some("restore") => Some(pack.core.template_restore.restore_seconds),
-                    Some("repair_with_site") => Some(pack.core.template_restore.depot_repair_seconds),
+                    Some("repair_with_site") => {
+                        Some(pack.core.template_restore.depot_repair_seconds)
+                    }
                     _ => None,
                 };
                 units.push(SimUnit {
@@ -171,7 +192,11 @@ impl Sim {
         let convoy_ids = pack.core.convoy_unit_ids();
         let truck = |team: u8| {
             let prefix = if team == 1 { "ussr" } else { "us_" };
-            convoy_ids.iter().find(|id| id.contains("carrier") && id.contains(prefix)).cloned().unwrap_or_else(|| "truck".into())
+            convoy_ids
+                .iter()
+                .find(|id| id.contains("carrier") && id.contains(prefix))
+                .cloned()
+                .unwrap_or_else(|| "truck".into())
         };
         let mut depots: Vec<Depot> = Vec::new();
         for (si, site) in var.sites.iter().enumerate() {
@@ -179,7 +204,11 @@ impl Sim {
                 continue;
             }
             let links = |links: &[(String, String, u32)]| -> Vec<usize> {
-                links.iter().filter(|(from, _, _)| *from == site.id).filter_map(|(_, to, _)| var.site_index(to)).collect()
+                links
+                    .iter()
+                    .filter(|(from, _, _)| *from == site.id)
+                    .filter_map(|(_, to, _)| var.site_index(to))
+                    .collect()
             };
             let low = rules.initial_fraction.first().copied().unwrap_or(0.2);
             let high = rules.initial_fraction.get(1).copied().unwrap_or(0.4);
@@ -194,18 +223,41 @@ impl Sim {
             });
         }
         let centre = |team: u8| {
-            let mine: Vec<V2> = var.sites.iter().filter(|s| s.team == team && s.cat == "strongpoint").map(|s| s.p).collect();
-            mine.iter().fold(V2(0.0, 0.0), |a, p| a.add(*p)).scale(1.0 / mine.len().max(1) as f64)
+            let mine: Vec<V2> = var
+                .sites
+                .iter()
+                .filter(|s| s.team == team && s.cat == "strongpoint")
+                .map(|s| s.p)
+                .collect();
+            mine.iter()
+                .fold(V2(0.0, 0.0), |a, p| a.add(*p))
+                .scale(1.0 / mine.len().max(1) as f64)
         };
         let (home, away) = (centre(my_team), centre(3 - my_team));
         let mut planes = Vec::new();
         for i in 0..4 {
             let t = 0.25 + 0.2 * i as f64;
-            planes.push(Plane { team: my_team, centre: home.lerp(away, t), radius: rng.range(5000.0, 9000.0), phase: rng.range(0.0, 6.28), rate: rng.range(0.02, 0.04) });
-            planes.push(Plane { team: 3 - my_team, centre: away.lerp(home, t * 0.8), radius: rng.range(5000.0, 9000.0), phase: rng.range(0.0, 6.28), rate: -rng.range(0.02, 0.04) });
+            planes.push(Plane {
+                team: my_team,
+                centre: home.lerp(away, t),
+                radius: rng.range(5000.0, 9000.0),
+                phase: rng.range(0.0, 6.28),
+                rate: rng.range(0.02, 0.04),
+            });
+            planes.push(Plane {
+                team: 3 - my_team,
+                centre: away.lerp(home, t * 0.8),
+                radius: rng.range(5000.0, 9000.0),
+                phase: rng.range(0.0, 6.28),
+                rate: -rng.range(0.02, 0.04),
+            });
         }
         // The player flies a loop over the enemy's depots and strongpoints.
-        let start = var.sites.iter().find(|s| s.team == my_team && s.cat == "airfield").map_or(home, |s| s.p);
+        let start = var
+            .sites
+            .iter()
+            .find(|s| s.team == my_team && s.cat == "airfield")
+            .map_or(home, |s| s.p);
         let mut stops: Vec<V2> = var
             .sites
             .iter()
@@ -223,13 +275,17 @@ impl Sim {
             .core
             .vehicles
             .iter()
-            .filter(|(_, v)| v.2 == "fighter" && v.0 >= eras[era].rank[0] && v.0 <= eras[era].rank[1])
+            .filter(|(_, v)| {
+                v.2 == "fighter" && v.0 >= eras[era].rank[0] && v.0 <= eras[era].rank[1]
+            })
             // team 1 flies USSR and Chinese aircraft, team 2 everything else
             .filter(|(_, v)| matches!(v.1.as_str(), "ussr" | "china") == (my_team == 1))
             .map(|(id, _)| id)
             .collect();
         candidates.sort();
-        let vehicle = candidates.first().map_or_else(|| "f_16a_block_10".to_string(), |id| (*id).clone());
+        let vehicle = candidates
+            .first()
+            .map_or_else(|| "f_16a_block_10".to_string(), |id| (*id).clone());
         let graph = RoadGraph::build(&lvl.road_file);
         Sim {
             level,
@@ -260,7 +316,8 @@ impl Sim {
     }
 
     pub fn player(&self) -> (V2, V2) {
-        self.player_path.at(self.player_s % self.player_path.length().max(1.0))
+        self.player_path
+            .at(self.player_s % self.player_path.length().max(1.0))
     }
 
     fn sensors(&self) -> Vec<(V2, f64, u8)> {
@@ -280,7 +337,11 @@ impl Sim {
     }
 
     fn unit_name(&self, id: &str) -> String {
-        self.pack.core.units.get(id).map_or(id.to_string(), |u| u.short().to_string())
+        self.pack
+            .core
+            .units
+            .get(id)
+            .map_or(id.to_string(), |u| u.short().to_string())
     }
 
     pub fn step(&mut self, dt: f64) {
@@ -293,11 +354,17 @@ impl Sim {
         for di in 0..self.depots.len() {
             let site = &var.sites[self.depots[di].site];
             if site.cat != "assembly_area" && !self.depots[di].supply_to.is_empty() {
-                self.depots[di].stock = (self.depots[di].stock + rules.production_per_second * dt).min(rules.capacity);
-                let on_road = self.convoys.iter().filter(|c| c.supply && c.from_site == self.depots[di].site).count();
+                self.depots[di].stock =
+                    (self.depots[di].stock + rules.production_per_second * dt).min(rules.capacity);
+                let on_road = self
+                    .convoys
+                    .iter()
+                    .filter(|c| c.supply && c.from_site == self.depots[di].site)
+                    .count();
                 if self.depots[di].stock >= rules.dispatch_threshold && on_road < 2 {
                     self.depots[di].stock -= rules.dispatch_threshold;
-                    let to = self.depots[di].supply_to[self.rng.pick(self.depots[di].supply_to.len().min(3))];
+                    let to = self.depots[di].supply_to
+                        [self.rng.pick(self.depots[di].supply_to.len().min(3))];
                     let path = self.graph.route(site.p, var.sites[to].p);
                     let speed = rules.travel_speed.max(10.0) * self.rng.range(0.8, 0.92);
                     self.convoys.push(SimConvoy {
@@ -314,9 +381,13 @@ impl Sim {
                     });
                 }
             }
-            if site.cat == "assembly_area" && !self.depots[di].armor_to.is_empty() && self.t >= self.depots[di].next_armor {
+            if site.cat == "assembly_area"
+                && !self.depots[di].armor_to.is_empty()
+                && self.t >= self.depots[di].next_armor
+            {
                 self.depots[di].next_armor = self.t + self.rng.range(240.0, 520.0);
-                let to = self.depots[di].armor_to[self.rng.pick(self.depots[di].armor_to.len().min(3))];
+                let to =
+                    self.depots[di].armor_to[self.rng.pick(self.depots[di].armor_to.len().min(3))];
                 let path = self.graph.route(site.p, var.sites[to].p);
                 let speed = rules.travel_speed.max(10.0) * self.rng.range(0.75, 0.9);
                 self.convoys.push(SimConvoy {
@@ -350,7 +421,11 @@ impl Sim {
             .map(|c| (c.to_site, c.team))
             .collect();
         for (site, team) in arrived {
-            let defenders: Vec<&SimUnit> = self.units.iter().filter(|u| u.site as usize == site).collect();
+            let defenders: Vec<&SimUnit> = self
+                .units
+                .iter()
+                .filter(|u| u.site as usize == site)
+                .collect();
             if !defenders.is_empty() && defenders.iter().all(|u| !u.alive && u.team != team) {
                 self.capture_site(site, team);
             }
@@ -361,7 +436,11 @@ impl Sim {
         let sensors = self.sensors();
         let now = self.t;
         let scale = self.sensor_scale;
-        let seen_by = |p: V2, team: u8| sensors.iter().any(|(sp, range, st)| *st != team && sp.dist(p) <= *range * scale);
+        let seen_by = |p: V2, team: u8| {
+            sensors
+                .iter()
+                .any(|(sp, range, st)| *st != team && sp.dist(p) <= *range * scale)
+        };
         for unit in &mut self.units {
             if unit.alive && seen_by(unit.pos, unit.team) {
                 unit.detected_until = now + DETECT_LINGER_S;
@@ -375,7 +454,11 @@ impl Sim {
 
         // restores
         for unit in &mut self.units {
-            if !unit.alive && unit.restore_s.is_some_and(|after| now - unit.died_at >= after) {
+            if !unit.alive
+                && unit
+                    .restore_s
+                    .is_some_and(|after| now - unit.died_at >= after)
+            {
                 unit.alive = true;
             }
         }
@@ -384,10 +467,16 @@ impl Sim {
         if self.t >= self.next_kill {
             self.next_kill = self.t + self.rng.range(self.kill_every.0, self.kill_every.1);
             let roll = self.rng.next();
-            let victim_team = if roll < 0.8 { 3 - self.my_team } else { self.my_team };
+            let victim_team = if roll < 0.8 {
+                3 - self.my_team
+            } else {
+                self.my_team
+            };
             let enemy = 3 - self.my_team;
             if roll > 0.93 {
-                if let Some(ci) = (0..self.convoys.len()).find(|&i| self.convoys[i].team == enemy && self.convoys[i].detected_until > now) {
+                if let Some(ci) = (0..self.convoys.len()).find(|&i| {
+                    self.convoys[i].team == enemy && self.convoys[i].detected_until > now
+                }) {
                     self.convoys[ci].n -= 1;
                     let name = self.unit_name(&self.convoys[ci].vehicle.clone());
                     let tag = self.rng.pick(90);
@@ -395,11 +484,14 @@ impl Sim {
                     return;
                 }
             }
-            let want_visible = victim_team == self.my_team || self.rng.next() < self.visible_kill_bias;
+            let want_visible =
+                victim_team == self.my_team || self.rng.next() < self.visible_kill_bias;
             let pool: Vec<usize> = (0..self.units.len())
                 .filter(|&i| {
                     let u = &self.units[i];
-                    u.alive && u.team == victim_team && (victim_team == self.my_team || (u.detected_until > now) == want_visible)
+                    u.alive
+                        && u.team == victim_team
+                        && (victim_team == self.my_team || (u.detected_until > now) == want_visible)
                 })
                 .collect();
             if !pool.is_empty() {
@@ -408,7 +500,11 @@ impl Sim {
                 self.units[index].died_at = now;
                 self.units[index].detected_until = f64::NEG_INFINITY;
                 let name = self.unit_name(&self.units[index].id.clone());
-                let killer = if victim_team == self.my_team { "Raider" } else { "Hunter" };
+                let killer = if victim_team == self.my_team {
+                    "Raider"
+                } else {
+                    "Hunter"
+                };
                 let tag = self.rng.pick(90);
                 self.say(format!("{killer}_{tag} (F-16C) destroyed {name}"));
             }
@@ -454,7 +550,13 @@ impl Sim {
         let var = &lvl.variants[self.variant];
         let frame = crate::geo::MapFrame::from_bounds(lvl.bounds);
         let colour = |team: u8| if team == self.my_team { ALLY } else { ENEMY };
-        let rgb = |team: u8| if team == self.my_team { json!([23, 77, 255]) } else { json!([250, 12, 0]) };
+        let rgb = |team: u8| {
+            if team == self.my_team {
+                json!([23, 77, 255])
+            } else {
+                json!([250, 12, 0])
+            }
+        };
         match route {
             "/map_info.json" => Some(
                 json!({
@@ -555,12 +657,23 @@ impl Sim {
     pub fn frame(&self, last_hud_id: i64) -> Frame {
         Frame {
             reachable: true,
-            map_info: self.page("/map_info.json").and_then(|t| telemetry::parse_map_info(&t)),
-            objects: self.page("/map_obj.json").and_then(|t| telemetry::parse_map_obj(&t)),
-            vehicle: self.page("/indicators").and_then(|t| telemetry::parse_indicators(&t)),
+            map_info: self
+                .page("/map_info.json")
+                .and_then(|t| telemetry::parse_map_info(&t)),
+            objects: self
+                .page("/map_obj.json")
+                .and_then(|t| telemetry::parse_map_obj(&t)),
+            vehicle: self
+                .page("/indicators")
+                .and_then(|t| telemetry::parse_indicators(&t)),
             flight: self.page("/state").and_then(|t| telemetry::parse_state(&t)),
-            hud: self.page(&format!("/hudmsg?lastEvt=0&lastDmg={last_hud_id}")).and_then(|t| telemetry::parse_hudmsg(&t)).unwrap_or_default(),
-            mission_status: self.page("/mission.json").and_then(|t| telemetry::parse_mission(&t)),
+            hud: self
+                .page(&format!("/hudmsg?lastEvt=0&lastDmg={last_hud_id}"))
+                .and_then(|t| telemetry::parse_hudmsg(&t))
+                .unwrap_or_default(),
+            mission_status: self
+                .page("/mission.json")
+                .and_then(|t| telemetry::parse_mission(&t)),
         }
     }
 

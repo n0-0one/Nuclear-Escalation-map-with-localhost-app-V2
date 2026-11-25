@@ -125,7 +125,11 @@ pub struct Contact {
 
 impl Convoys {
     pub fn new() -> Self {
-        Convoys { next_id: 1, default_speed: 17.0, ..Default::default() }
+        Convoys {
+            next_id: 1,
+            default_speed: 17.0,
+            ..Default::default()
+        }
     }
 
     pub fn clear_live(&mut self) {
@@ -137,7 +141,13 @@ impl Convoys {
     }
 
     /// Works out every convoy route of the mission layout once.
-    pub fn prepare(&mut self, variant: &Variant, graph: &mut RoadGraph, rules: &ResourceRules, pass_radius: f64) {
+    pub fn prepare(
+        &mut self,
+        variant: &Variant,
+        graph: &mut RoadGraph,
+        rules: &ResourceRules,
+        pass_radius: f64,
+    ) {
         self.routes.clear();
         self.schedules.clear();
         self.list.clear();
@@ -145,9 +155,15 @@ impl Convoys {
         if rules.travel_speed > 0.0 {
             self.default_speed = rules.travel_speed * DEFAULT_SPEED_FACTOR;
         }
-        let mut add = |kind: RouteKind, links: &[(String, String, u32)], routes: &mut Vec<Route>| {
+        let mut add = |kind: RouteKind,
+                       links: &[(String, String, u32)],
+                       routes: &mut Vec<Route>| {
             for (from_id, to_id, rank) in links {
-                let (Some(from), Some(to)) = (variant.site_index(from_id), variant.site_index(to_id)) else { continue };
+                let (Some(from), Some(to)) =
+                    (variant.site_index(from_id), variant.site_index(to_id))
+                else {
+                    continue;
+                };
                 let path = graph.route(variant.sites[from].p, variant.sites[to].p);
                 let mut passes = Vec::new();
                 for (si, site) in variant.sites.iter().enumerate() {
@@ -162,7 +178,15 @@ impl Convoys {
                         passes.push((si, s, off));
                     }
                 }
-                routes.push(Route { kind, team: variant.sites[from].team, from, to, rank: *rank, path, passes });
+                routes.push(Route {
+                    kind,
+                    team: variant.sites[from].team,
+                    from,
+                    to,
+                    rank: *rank,
+                    path,
+                    passes,
+                });
             }
         };
         add(RouteKind::Supply, &variant.supply_links, &mut self.routes);
@@ -171,8 +195,13 @@ impl Convoys {
         // Fuel and ammo depots dispatch on a fixed rhythm.
         if rules.production_per_second > 0.0 && rules.dispatch_threshold > 0.0 {
             let period = rules.dispatch_threshold / rules.production_per_second;
-            let fraction = |i: usize, fallback: f64| rules.initial_fraction.get(i).copied().unwrap_or(fallback);
-            let start = |f: f64| ((rules.dispatch_threshold - rules.capacity * f) / rules.production_per_second).max(0.0);
+            let fraction = |i: usize, fallback: f64| {
+                rules.initial_fraction.get(i).copied().unwrap_or(fallback)
+            };
+            let start = |f: f64| {
+                ((rules.dispatch_threshold - rules.capacity * f) / rules.production_per_second)
+                    .max(0.0)
+            };
             let window = (start(fraction(1, 0.4)), start(fraction(0, 0.2)));
             let mut seen = Vec::new();
             for (ri, route) in self.routes.iter().enumerate() {
@@ -188,7 +217,14 @@ impl Convoys {
                     .min_by_key(|(_, r)| r.rank)
                     .map(|(i, _)| i)
                     .unwrap_or(ri);
-                self.schedules.push(Schedule { site: route.from, team: route.team, period, window, lock: None, route: Some(nearest) });
+                self.schedules.push(Schedule {
+                    site: route.from,
+                    team: route.team,
+                    period,
+                    window,
+                    lock: None,
+                    route: Some(nearest),
+                });
             }
         }
     }
@@ -218,13 +254,15 @@ impl Convoys {
         for contact in contacts {
             let mut best: Option<(usize, f64)> = None;
             for (ti, track) in self.tracks.iter().enumerate() {
-                if used[ti] || (track.team != 0 && contact.team != 0 && track.team != contact.team) {
+                if used[ti] || (track.team != 0 && contact.team != 0 && track.team != contact.team)
+                {
                     continue;
                 }
                 let dt = (now - track.last).max(0.05);
                 let predicted = track.pos.add(track.vel.scale(dt));
                 let d = predicted.dist(contact.pos).min(track.pos.dist(contact.pos));
-                if d <= TRACK_GATE_M + TRACK_SPEED_GATE * dt && best.map_or(true, |(_, bd)| d < bd) {
+                if d <= TRACK_GATE_M + TRACK_SPEED_GATE * dt && best.map_or(true, |(_, bd)| d < bd)
+                {
                     best = Some((ti, d));
                 }
             }
@@ -247,7 +285,14 @@ impl Convoys {
                     }
                 }
                 None => {
-                    self.tracks.push(Track { team: contact.team, pos: contact.pos, vel: V2(0.0, 0.0), origin: contact.pos, last: now, hits: 1 });
+                    self.tracks.push(Track {
+                        team: contact.team,
+                        pos: contact.pos,
+                        vel: V2(0.0, 0.0),
+                        origin: contact.pos,
+                        last: now,
+                        hits: 1,
+                    });
                     used.push(true);
                 }
             }
@@ -280,7 +325,10 @@ impl Convoys {
                 for b in 0..moving.len() {
                     if group[b] == usize::MAX
                         && self.tracks[moving[b]].team == self.tracks[moving[current]].team
-                        && self.tracks[moving[b]].pos.dist(self.tracks[moving[current]].pos) < GROUP_M
+                        && self.tracks[moving[b]]
+                            .pos
+                            .dist(self.tracks[moving[current]].pos)
+                            < GROUP_M
                     {
                         group[b] = gi;
                         groups[gi].push(moving[b]);
@@ -294,8 +342,14 @@ impl Convoys {
         for members in groups {
             let n = members.len() as u32;
             let team = self.tracks[members[0]].team;
-            let centre = members.iter().fold(V2(0.0, 0.0), |acc, &i| acc.add(self.tracks[i].pos)).scale(1.0 / n as f64);
-            let velocity = members.iter().fold(V2(0.0, 0.0), |acc, &i| acc.add(self.tracks[i].vel)).scale(1.0 / n as f64);
+            let centre = members
+                .iter()
+                .fold(V2(0.0, 0.0), |acc, &i| acc.add(self.tracks[i].pos))
+                .scale(1.0 / n as f64);
+            let velocity = members
+                .iter()
+                .fold(V2(0.0, 0.0), |acc, &i| acc.add(self.tracks[i].vel))
+                .scale(1.0 / n as f64);
 
             let mut best: Option<(usize, f64)> = None;
             for (ci, convoy) in self.list.iter().enumerate() {
@@ -345,7 +399,11 @@ impl Convoys {
             convoy.pos = centre;
             if velocity.len() > 1.0 {
                 convoy.dir = velocity.unit();
-                convoy.speed = if convoy.updates > 2 { convoy.speed * 0.8 + velocity.len() * 0.2 } else { velocity.len() };
+                convoy.speed = if convoy.updates > 2 {
+                    convoy.speed * 0.8 + velocity.len() * 0.2
+                } else {
+                    velocity.len()
+                };
             }
             convoy.state = ConvoyState::Observed;
             convoy.last_seen = now;
@@ -364,7 +422,9 @@ impl Convoys {
     }
 
     fn on_some_route(&self, p: V2, team: u8) -> bool {
-        self.routes.iter().any(|route| route.team == team && route.path.project(p).1 < ROUTE_OFF_M * 0.6)
+        self.routes
+            .iter()
+            .any(|route| route.team == team && route.path.project(p).1 < ROUTE_OFF_M * 0.6)
     }
 
     fn fit_route(&mut self, ci: usize, now: f64) {
@@ -378,13 +438,21 @@ impl Convoys {
             if off > ROUTE_OFF_M {
                 continue;
             }
-            let agreement = if convoy.speed > 2.0 { convoy.dir.dot(dir) } else { 1.0 };
+            let agreement = if convoy.speed > 2.0 {
+                convoy.dir.dot(dir)
+            } else {
+                1.0
+            };
             if agreement < 0.25 {
                 continue;
             }
             // Prefer the route we already follow so shared stretches do not flip-flop.
             let keep = if convoy.route == Some(ri) { -80.0 } else { 0.0 };
-            let done = if route.path.length() - s < 30.0 { 500.0 } else { 0.0 };
+            let done = if route.path.length() - s < 30.0 {
+                500.0
+            } else {
+                0.0
+            };
             let cost = off + (1.0 - agreement) * 250.0 + route.rank as f64 * 25.0 + keep + done;
             if best.map_or(true, |(_, bc)| cost < bc) {
                 best = Some((ri, cost));
@@ -422,7 +490,11 @@ impl Convoys {
                 }
                 None => {
                     // No road to follow: coast in a straight line for a short while.
-                    let step = if convoy.speed > 1.0 { convoy.speed } else { default_speed };
+                    let step = if convoy.speed > 1.0 {
+                        convoy.speed
+                    } else {
+                        default_speed
+                    };
                     convoy.unc = 120.0 + 0.5 * step * gap;
                     if gap > 45.0 && convoy.arrived_at.is_none() {
                         convoy.arrived_at = Some(now - 30.0);
@@ -431,7 +503,9 @@ impl Convoys {
             }
         }
         self.list.retain(|convoy| {
-            convoy.n > 0 && convoy.arrived_at.map_or(true, |at| now - at < 20.0) && now - convoy.last_seen < 1500.0
+            convoy.n > 0
+                && convoy.arrived_at.map_or(true, |at| now - at < 20.0)
+                && now - convoy.last_seen < 1500.0
         });
     }
 
@@ -446,7 +520,11 @@ impl Convoys {
             if route.kind != RouteKind::Supply || convoy.s > route.path.length() * 0.9 {
                 continue;
             }
-            let speed = if convoy.speed > 3.0 { convoy.speed.clamp(5.0, 25.0) } else { self.default_speed };
+            let speed = if convoy.speed > 3.0 {
+                convoy.speed.clamp(5.0, 25.0)
+            } else {
+                self.default_speed
+            };
             let dispatched = battle_t - convoy.s / speed;
             if let Some(schedule) = self.schedules.iter_mut().find(|s| s.site == route.from) {
                 schedule.lock = Some(dispatched);
@@ -460,7 +538,9 @@ impl Convoys {
     pub fn scheduled(&self, battle_t: f64, enemy_team: u8) -> Vec<Convoy> {
         let mut out = Vec::new();
         for schedule in &self.schedules {
-            let (Some(lock), Some(ri)) = (schedule.lock, schedule.route) else { continue };
+            let (Some(lock), Some(ri)) = (schedule.lock, schedule.route) else {
+                continue;
+            };
             if schedule.team != enemy_team {
                 continue;
             }
@@ -471,7 +551,9 @@ impl Convoys {
                 let dispatched = lock + k * schedule.period;
                 let s = (battle_t - dispatched) * self.default_speed;
                 let covered = self.list.iter().any(|c| {
-                    c.route.is_some_and(|r| self.routes[r].from == schedule.site) && (c.s_now - s).abs() < 2500.0
+                    c.route
+                        .is_some_and(|r| self.routes[r].from == schedule.site)
+                        && (c.s_now - s).abs() < 2500.0
                 });
                 if !covered && k != 0.0 {
                     let (pos, dir) = route.path.at(s);
@@ -506,7 +588,9 @@ impl Convoys {
         let convoy = self
             .list
             .iter_mut()
-            .filter(|c| c.team == team && c.state != ConvoyState::Scheduled && now - c.last_seen < 40.0)
+            .filter(|c| {
+                c.team == team && c.state != ConvoyState::Scheduled && now - c.last_seen < 40.0
+            })
             .max_by(|a, b| a.last_seen.partial_cmp(&b.last_seen).unwrap())?;
         convoy.n = convoy.n.saturating_sub(1);
         Some(convoy.id)

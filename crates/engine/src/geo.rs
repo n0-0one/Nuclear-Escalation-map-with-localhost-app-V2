@@ -47,7 +47,10 @@ impl V2 {
         (self.0.atan2(self.1).to_degrees() + 360.0) % 360.0
     }
     pub fn round(self) -> V2 {
-        V2((self.0 * 10.0).round() / 10.0, (self.1 * 10.0).round() / 10.0)
+        V2(
+            (self.0 * 10.0).round() / 10.0,
+            (self.1 * 10.0).round() / 10.0,
+        )
     }
 }
 
@@ -61,16 +64,27 @@ pub struct MapFrame {
 
 impl MapFrame {
     pub fn from_bounds(b: [f64; 4]) -> Self {
-        MapFrame { min: V2(b[0], b[1]), max: V2(b[2], b[3]) }
+        MapFrame {
+            min: V2(b[0], b[1]),
+            max: V2(b[2], b[3]),
+        }
     }
     pub fn to_world(&self, nx: f64, ny: f64) -> V2 {
-        V2(self.min.0 + nx * (self.max.0 - self.min.0), self.max.1 - ny * (self.max.1 - self.min.1))
+        V2(
+            self.min.0 + nx * (self.max.0 - self.min.0),
+            self.max.1 - ny * (self.max.1 - self.min.1),
+        )
     }
     pub fn to_norm(&self, p: V2) -> (f64, f64) {
-        ((p.0 - self.min.0) / (self.max.0 - self.min.0), (self.max.1 - p.1) / (self.max.1 - self.min.1))
+        (
+            (p.0 - self.min.0) / (self.max.0 - self.min.0),
+            (self.max.1 - p.1) / (self.max.1 - self.min.1),
+        )
     }
     pub fn span(&self) -> f64 {
-        (self.max.0 - self.min.0).abs().max((self.max.1 - self.min.1).abs())
+        (self.max.0 - self.min.0)
+            .abs()
+            .max((self.max.1 - self.min.1).abs())
     }
 }
 
@@ -84,10 +98,17 @@ pub struct Grid {
 
 impl Grid {
     pub fn new(cell: f64) -> Self {
-        Grid { cell, buckets: HashMap::new(), points: Vec::new() }
+        Grid {
+            cell,
+            buckets: HashMap::new(),
+            points: Vec::new(),
+        }
     }
     fn key(&self, p: V2) -> (i32, i32) {
-        ((p.0 / self.cell).floor() as i32, (p.1 / self.cell).floor() as i32)
+        (
+            (p.0 / self.cell).floor() as i32,
+            (p.1 / self.cell).floor() as i32,
+        )
     }
     pub fn insert(&mut self, p: V2) -> u32 {
         let index = self.points.len() as u32;
@@ -166,8 +187,15 @@ impl Path {
             Err(i) => i.saturating_sub(1).min(self.pts.len() - 2),
         };
         let seg = self.cum[i + 1] - self.cum[i];
-        let t = if seg > 1e-9 { (s - self.cum[i]) / seg } else { 0.0 };
-        (self.pts[i].lerp(self.pts[i + 1], t), self.pts[i + 1].sub(self.pts[i]).unit())
+        let t = if seg > 1e-9 {
+            (s - self.cum[i]) / seg
+        } else {
+            0.0
+        };
+        (
+            self.pts[i].lerp(self.pts[i + 1], t),
+            self.pts[i + 1].sub(self.pts[i]).unit(),
+        )
     }
     /// Closest point on the path: (distance along, distance off, direction).
     pub fn project(&self, p: V2) -> (f64, f64, V2) {
@@ -176,7 +204,11 @@ impl Path {
             let a = self.pts[i];
             let ab = self.pts[i + 1].sub(a);
             let l2 = ab.dot(ab);
-            let t = if l2 > 1e-9 { (p.sub(a).dot(ab) / l2).clamp(0.0, 1.0) } else { 0.0 };
+            let t = if l2 > 1e-9 {
+                (p.sub(a).dot(ab) / l2).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
             let d = a.add(ab.scale(t)).dist(p);
             if d < best.1 {
                 best = (self.cum[i] + l2.sqrt() * t, d, ab.unit());
@@ -218,7 +250,10 @@ mod tests {
         let (s, off, dir) = path.project(V2(50.0, 10.0));
         assert!((s - 50.0).abs() < 1e-9 && (off - 10.0).abs() < 1e-9 && dir == V2(1.0, 0.0));
         assert_eq!(path.at(150.0).0, V2(100.0, 50.0));
-        assert_eq!(path.slice(50.0, 150.0), vec![V2(50.0, 0.0), V2(100.0, 0.0), V2(100.0, 50.0)]);
+        assert_eq!(
+            path.slice(50.0, 150.0),
+            vec![V2(50.0, 0.0), V2(100.0, 0.0), V2(100.0, 50.0)]
+        );
     }
 
     #[test]

@@ -35,13 +35,27 @@ impl Link {
             .timeout_write(Duration::from_millis(400))
             .redirects(0)
             .build();
-        Link { agent, base: base.trim_end_matches('/').to_string(), last_dmg: 0, tick: 0, generation: None }
+        Link {
+            agent,
+            base: base.trim_end_matches('/').to_string(),
+            last_dmg: 0,
+            tick: 0,
+            generation: None,
+        }
     }
 
     fn get(&self, path: &str) -> Option<String> {
-        let response = self.agent.get(&format!("{}{}", self.base, path)).call().ok()?;
+        let response = self
+            .agent
+            .get(&format!("{}{}", self.base, path))
+            .call()
+            .ok()?;
         let mut body = String::new();
-        response.into_reader().take(MAX_BODY).read_to_string(&mut body).ok()?;
+        response
+            .into_reader()
+            .take(MAX_BODY)
+            .read_to_string(&mut body)
+            .ok()?;
         Some(body)
     }
 
@@ -52,9 +66,17 @@ impl Link {
 
     /// Raw bytes of the game's own map picture, for maps the app has no art for.
     pub fn map_image(&self) -> Option<Vec<u8>> {
-        let response = self.agent.get(&format!("{}/map.img", self.base)).call().ok()?;
+        let response = self
+            .agent
+            .get(&format!("{}/map.img", self.base))
+            .call()
+            .ok()?;
         let mut body = Vec::new();
-        response.into_reader().take(16 * 1024 * 1024).read_to_end(&mut body).ok()?;
+        response
+            .into_reader()
+            .take(16 * 1024 * 1024)
+            .read_to_end(&mut body)
+            .ok()?;
         if body.len() < 64 {
             return None;
         }
@@ -71,7 +93,9 @@ impl Link {
         frame.reachable = true;
         frame.objects = telemetry::parse_map_obj(&objects);
         if self.tick % 4 == 1 {
-            frame.map_info = self.get("/map_info.json").and_then(|t| telemetry::parse_map_info(&t));
+            frame.map_info = self
+                .get("/map_info.json")
+                .and_then(|t| telemetry::parse_map_info(&t));
             if let Some(Some(info)) = &frame.map_info {
                 if self.generation.is_some_and(|g| g != info.generation) {
                     self.last_dmg = 0;
@@ -80,7 +104,10 @@ impl Link {
             }
         }
         if self.tick % 2 == 0 {
-            if let Some(lines) = self.get(&format!("/hudmsg?lastEvt=0&lastDmg={}", self.last_dmg)).and_then(|t| telemetry::parse_hudmsg(&t)) {
+            if let Some(lines) = self
+                .get(&format!("/hudmsg?lastEvt=0&lastDmg={}", self.last_dmg))
+                .and_then(|t| telemetry::parse_hudmsg(&t))
+            {
                 if let Some(max) = lines.iter().map(|l| l.id).max() {
                     self.last_dmg = self.last_dmg.max(max);
                 }
@@ -88,9 +115,17 @@ impl Link {
             }
         }
         match self.tick % 8 {
-            3 => frame.vehicle = self.get("/indicators").and_then(|t| telemetry::parse_indicators(&t)),
+            3 => {
+                frame.vehicle = self
+                    .get("/indicators")
+                    .and_then(|t| telemetry::parse_indicators(&t))
+            }
             5 => frame.flight = self.get("/state").and_then(|t| telemetry::parse_state(&t)),
-            7 => frame.mission_status = self.get("/mission.json").and_then(|t| telemetry::parse_mission(&t)),
+            7 => {
+                frame.mission_status = self
+                    .get("/mission.json")
+                    .and_then(|t| telemetry::parse_mission(&t))
+            }
             _ => {}
         }
         frame

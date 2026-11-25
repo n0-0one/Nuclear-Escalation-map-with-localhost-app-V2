@@ -2,7 +2,7 @@
 
 import { computed, effect, signal } from "@preact/signals";
 import { command, packJson, subscribe } from "./transport";
-import type { Core, Level, Manifest, Settings, Site, Snapshot, Status, Proof, Variant } from "./types";
+import type { Core, Level, Manifest, Settings, ShipView, Site, Snapshot, Status, Proof, Variant } from "./types";
 
 export const core = signal<Core | null>(null);
 export const manifest = signal<Manifest | null>(null);
@@ -75,9 +75,10 @@ export const shownCategories = computed<Set<string> | null>(() => {
   return new Set(FILTERS.filter((f) => show.includes(f.id)).flatMap((f) => f.cats));
 });
 export const convoysShown = computed(() => !prefs.value.show.length || prefs.value.show.includes("convoys"));
-export function siteShown(site: Site): boolean {
+export function siteShown(site: Site, si?: number): boolean {
   const cats = shownCategories.value;
-  if (prefs.value.enemyOnly && site.team !== enemyTeam.value) return false;
+  const owner = si !== undefined ? siteStates.value.get(si)?.owner ?? site.team : site.team;
+  if (prefs.value.enemyOnly && owner !== enemyTeam.value) return false;
   return !cats || cats.has(site.cat);
 }
 /** Click = show only this; with Ctrl/Shift/Cmd = add or remove it. */
@@ -133,7 +134,21 @@ export const variant = computed<Variant | null>(() => {
 });
 export const eraIndex = computed(() => Math.max(0, core.value?.eras.findIndex((e) => e.id === view.value.era) ?? 0));
 
-export interface SiteState { alive: number; total: number; destroyed: boolean; visible: number; units: Map<number, [Status, Proof, boolean, number | null]> }
+export interface SiteState {
+  alive: number; total: number; visible: number;
+  /** Every unit destroyed. */
+  destroyed: boolean;
+  /** Air defence with all its weapons destroyed (radars may be left). */
+  disarmed: boolean;
+  units: Map<number, [Status, Proof, boolean, number | null]>;
+  /** Who holds the site now, and whether that changed during the battle. */
+  owner: number; captured: boolean; captureProof: Proof | null;
+  /** Where it is now: a ship's live or estimated position, else the site's own. */
+  p: [number, number];
+  ship: ShipView | null;
+}
+
+const ARMED_CATS = new Set(["long_sam", "short_sam", "sam_cover", "spaa_cover", "ship"]);
 
 /** Per-site roll-up of unit states for the current battle. */
 export const siteStates = computed<Map<number, SiteState>>(() => {
@@ -143,9 +158,10 @@ export const siteStates = computed<Map<number, SiteState>>(() => {
   const bit = eraIndex.value;
   v.sites.forEach((site, si) => {
     const total = site.units.filter((u) => (u.e >> bit) & 1).length;
-    out.set(si, { alive: total, total, destroyed: false, visible: 0, units: new Map() });
+    out.set(si, { alive: total, total, destroyed: false, disarmed: false, visible: 0, units: new Map(), owner: site.team, captured: false, captureProof: null, p: site.p, ship: null });
   });
   const s = snapshot.value;
+  const units = core.value?.units ?? {};
   if (s && live.value) {
     for (const [si, slot, status, proof, visible, eta] of s.units) {
       const state = out.get(si);
@@ -154,7 +170,34 @@ export const siteStates = computed<Map<number, SiteState>>(() => {
       if (status === "destroyed") state.alive -= 1;
       if (visible) state.visible += 1;
     }
-    for (const state of out.values()) state.destroyed = state.total > 0 && state.alive <= 0;
+    for (const [si, owner, proof] of s.owners ?? []) {
+      const state = out.get(si);
+      if (!state) continue;
+      state.owner = owner;
+      state.captured = owner !== v.sites[si].team;
+      state.captureProof = proof;
+    }
+    for (const ship of s.ships ?? []) {
+      const state = out.get(ship.site);
+      if (!state) continue;
+      state.ship = ship;
+      state.p = ship.p;
+    }
+    out.forEach((state, si) => {
+      state.destroyed = state.total > 0 && state.alive <= 0;
+      const site = v.sites[si];
+      if (!ARMED_CATS.has(site.cat) || state.destroyed) return;
+      // anything that can shoot at an aircraft
+      let armed = 0, armedAlive = 0;
+      site.units.forEach((u, slot) => {
+        if (!((u.e >> bit) & 1)) return;
+        const spec = units[u.u];
+        if (!(spec?.eng || spec?.ai_eng || spec?.gun || u.tr)) return;
+        armed += 1;
+        if (state.units.get(slot)?.[0] !== "destroyed") armedAlive += 1;
+      });
+      state.disarmed = armed > 0 && armedAlive === 0;
+    });
   }
   return out;
 });

@@ -50,7 +50,11 @@ fn respond(status: StatusCode, content_type: &str, body: Vec<u8>) -> Response<Ve
 /// Serves one file of the data pack; never anything outside it.
 fn serve_pack(pack_dir: &Path, uri_path: &str) -> Response<Vec<u8>> {
     let relative = Path::new(uri_path.trim_start_matches('/'));
-    if relative.as_os_str().is_empty() || relative.components().any(|c| !matches!(c, Component::Normal(_))) {
+    if relative.as_os_str().is_empty()
+        || relative
+            .components()
+            .any(|c| !matches!(c, Component::Normal(_)))
+    {
         return respond(StatusCode::BAD_REQUEST, "text/plain", Vec::new());
     }
     let file = pack_dir.join(relative);
@@ -68,7 +72,9 @@ fn engine(state: tauri::State<'_, App>, cmd: String, args: Value) -> Result<Valu
 
 #[tauri::command]
 fn app_info(state: tauri::State<'_, App>) -> Value {
-    let program = std::env::current_exe().ok().and_then(|exe| exe.parent().map(|d| d.display().to_string()));
+    let program = std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(|d| d.display().to_string()));
     json!({
         "version": env!("CARGO_PKG_VERSION"),
         "pack_source": state.pack_source,
@@ -80,12 +86,20 @@ fn app_info(state: tauri::State<'_, App>) -> Value {
 
 /// Opens the program's folder or its data folder in Explorer.
 #[tauri::command]
-fn open_folder(window: tauri::WebviewWindow, state: tauri::State<'_, App>, which: String) -> Result<(), String> {
+fn open_folder(
+    window: tauri::WebviewWindow,
+    state: tauri::State<'_, App>,
+    which: String,
+) -> Result<(), String> {
     if window.label() != "main" {
         return Err("Only the main window opens folders.".into());
     }
     let folder = match which.as_str() {
-        "program" => std::env::current_exe().map_err(|e| e.to_string())?.parent().ok_or("Unknown folder")?.to_path_buf(),
+        "program" => std::env::current_exe()
+            .map_err(|e| e.to_string())?
+            .parent()
+            .ok_or("Unknown folder")?
+            .to_path_buf(),
         "data" => state.data_root.clone(),
         "recordings" => {
             let dir = state.data_root.join("recordings");
@@ -118,15 +132,22 @@ async fn app_update_check(window: tauri::WebviewWindow) -> Result<appupdate::Che
     if window.label() != "main" {
         return Err("Only the main window checks for updates.".into());
     }
-    tauri::async_runtime::spawn_blocking(appupdate::check).await.map_err(|e| e.to_string())?
+    tauri::async_runtime::spawn_blocking(appupdate::check)
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-async fn app_update_install(window: tauri::WebviewWindow, app: tauri::AppHandle) -> Result<String, String> {
+async fn app_update_install(
+    window: tauri::WebviewWindow,
+    app: tauri::AppHandle,
+) -> Result<String, String> {
     if window.label() != "main" {
         return Err("Only the main window installs updates.".into());
     }
-    let (message, close) = tauri::async_runtime::spawn_blocking(appupdate::install).await.map_err(|e| e.to_string())??;
+    let (message, close) = tauri::async_runtime::spawn_blocking(appupdate::install)
+        .await
+        .map_err(|e| e.to_string())??;
     if close {
         // Give the window a moment to show the message, then make way for the installer.
         std::thread::spawn(move || {
@@ -139,38 +160,55 @@ async fn app_update_install(window: tauri::WebviewWindow, app: tauri::AppHandle)
 
 /// Shows, hides or (un)locks the mini map window. Only the main window may ask.
 #[tauri::command]
-fn overlay(window: tauri::WebviewWindow, app: tauri::AppHandle, action: String) -> Result<(), String> {
+fn overlay(
+    window: tauri::WebviewWindow,
+    app: tauri::AppHandle,
+    action: String,
+) -> Result<(), String> {
     if window.label() != "main" {
         return Err("Only the main window controls the mini map.".into());
     }
     let existing = app.get_webview_window("overlay");
     match (action.as_str(), existing) {
         ("show", Some(overlay)) => {
-            overlay.set_ignore_cursor_events(false).map_err(|e| e.to_string())?;
+            overlay
+                .set_ignore_cursor_events(false)
+                .map_err(|e| e.to_string())?;
             overlay.show().map_err(|e| e.to_string())
         }
         ("show", None) => {
-            let mut builder = WebviewWindowBuilder::new(&app, "overlay", WebviewUrl::App("index.html?overlay=1".into()));
-            if let Some(dir) = app.try_state::<App>().and_then(|state| state.webview_dir.clone()) {
+            let mut builder = WebviewWindowBuilder::new(
+                &app,
+                "overlay",
+                WebviewUrl::App("index.html?overlay=1".into()),
+            );
+            if let Some(dir) = app
+                .try_state::<App>()
+                .and_then(|state| state.webview_dir.clone())
+            {
                 builder = builder.data_directory(dir);
             }
             builder
-            .title("Nuclear Thunder Live - mini map")
-            .inner_size(300.0, 340.0)
-            .min_inner_size(200.0, 230.0)
-            .decorations(false)
-            .transparent(true)
-            .shadow(false)
-            .always_on_top(true)
-            .skip_taskbar(true)
-            .focused(false)
-            .build()
-            .map(|_| ())
-            .map_err(|e| e.to_string())
+                .title("Nuclear Thunder Live - mini map")
+                .inner_size(300.0, 340.0)
+                .min_inner_size(200.0, 230.0)
+                .decorations(false)
+                .transparent(true)
+                .shadow(false)
+                .always_on_top(true)
+                .skip_taskbar(true)
+                .focused(false)
+                .build()
+                .map(|_| ())
+                .map_err(|e| e.to_string())
         }
         ("hide", Some(overlay)) => overlay.hide().map_err(|e| e.to_string()),
-        ("locked", Some(overlay)) => overlay.set_ignore_cursor_events(true).map_err(|e| e.to_string()),
-        ("unlocked", Some(overlay)) => overlay.set_ignore_cursor_events(false).map_err(|e| e.to_string()),
+        ("locked", Some(overlay)) => overlay
+            .set_ignore_cursor_events(true)
+            .map_err(|e| e.to_string()),
+        ("unlocked", Some(overlay)) => overlay
+            .set_ignore_cursor_events(false)
+            .map_err(|e| e.to_string()),
         (_, None) => Ok(()),
         _ => Err("Unknown mini map action.".into()),
     }
@@ -178,9 +216,15 @@ fn overlay(window: tauri::WebviewWindow, app: tauri::AppHandle, action: String) 
 
 /// Picks the data pack to use: a downloaded one when it is valid and newer
 /// than the one that shipped with the app, otherwise the shipped one.
-fn choose_pack(bundled: &Path, data_root: &Path) -> Result<(Arc<Pack>, PathBuf, &'static str), String> {
+fn choose_pack(
+    bundled: &Path,
+    data_root: &Path,
+) -> Result<(Arc<Pack>, PathBuf, &'static str), String> {
     let downloaded = data_root.join("pack");
-    let newer = match (update::read_manifest(&downloaded), update::read_manifest(bundled)) {
+    let newer = match (
+        update::read_manifest(&downloaded),
+        update::read_manifest(bundled),
+    ) {
         (Some(d), Some(b)) => d.generated > b.generated,
         (Some(_), None) => true,
         _ => false,
@@ -221,10 +265,13 @@ fn main() {
             let handle = app.handle().clone();
             let resources = app.path().resource_dir()?;
             // Development runs keep the pack at the repository root.
-            let bundled = [resources.join("data"), PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../data")]
-                .into_iter()
-                .find(|dir| dir.join("core.json").exists())
-                .ok_or("The app's map data is missing. Please reinstall.")?;
+            let bundled = [
+                resources.join("data"),
+                PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../data"),
+            ]
+            .into_iter()
+            .find(|dir| dir.join("core.json").exists())
+            .ok_or("The app's map data is missing. Please reinstall.")?;
             appupdate::cleanup_previous();
             let appdata = app.path().app_data_dir()?;
             let portable = portable_root();
@@ -232,7 +279,10 @@ fn main() {
             let _ = std::fs::create_dir_all(&data_root);
             // Moving from the installed version: bring the settings along once.
             if portable.is_some() && !data_root.join("settings.json").exists() {
-                let _ = std::fs::copy(appdata.join("settings.json"), data_root.join("settings.json"));
+                let _ = std::fs::copy(
+                    appdata.join("settings.json"),
+                    data_root.join("settings.json"),
+                );
             }
             let webview_dir = portable.as_ref().map(|root| root.join("webview"));
             let (pack, pack_dir, pack_source) = choose_pack(&bundled, &data_root)?;
@@ -250,14 +300,21 @@ fn main() {
             if let Ok(level) = std::env::var("NTL_DEMO") {
                 let _ = host.command("demo_start", json!({ "level": level, "speed": 10.0 }));
             }
-            app.manage(App { host, webview_dir: webview_dir.clone(), pack_dir: pack_dir.clone(), data_root: data_root.clone(), pack_source });
+            app.manage(App {
+                host,
+                webview_dir: webview_dir.clone(),
+                pack_dir: pack_dir.clone(),
+                data_root: data_root.clone(),
+                pack_source,
+            });
 
             // The main window is created here (not in tauri.conf.json) so a
             // portable copy can keep its browser data in its own folder too.
-            let mut main = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
-                .title("Nuclear Thunder Live")
-                .inner_size(1500.0, 920.0)
-                .min_inner_size(980.0, 600.0);
+            let mut main =
+                WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+                    .title("Nuclear Thunder Live")
+                    .inner_size(1500.0, 920.0)
+                    .min_inner_size(980.0, 600.0);
             if let Some(dir) = webview_dir {
                 main = main.data_directory(dir);
             }
@@ -267,7 +324,9 @@ fn main() {
             let notifier = handle.clone();
             std::thread::spawn(move || {
                 std::thread::sleep(std::time::Duration::from_secs(6));
-                if let Ok(update::Outcome::Downloaded { game_version }) = update::update(&pack_dir, &data_root) {
+                if let Ok(update::Outcome::Downloaded { game_version }) =
+                    update::update(&pack_dir, &data_root)
+                {
                     let _ = notifier.emit("data-updated", game_version);
                 }
             });
@@ -282,7 +341,15 @@ fn main() {
                 window.app_handle().exit(0);
             }
         })
-        .invoke_handler(tauri::generate_handler![engine, app_info, update_data, overlay, app_update_check, app_update_install, open_folder])
+        .invoke_handler(tauri::generate_handler![
+            engine,
+            app_info,
+            update_data,
+            overlay,
+            app_update_check,
+            app_update_install,
+            open_folder
+        ])
         .run(tauri::generate_context!())
         .expect("the app window could not be created");
 }

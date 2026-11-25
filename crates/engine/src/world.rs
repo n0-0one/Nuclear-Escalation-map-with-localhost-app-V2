@@ -166,7 +166,10 @@ impl World {
         for (si, site) in var.sites.iter().enumerate() {
             // Ships move along their routes; rocket artillery and missile
             // launchers wander inside their areas and are not tracked.
-            let route = site.route.as_ref().filter(|r| site.cat == "ship" && r.pts.len() >= 4);
+            let route = site
+                .route
+                .as_ref()
+                .filter(|r| site.cat == "ship" && r.pts.len() >= 4);
             if site.moves.is_some() && route.is_none() {
                 continue;
             }
@@ -175,18 +178,41 @@ impl World {
                     continue;
                 }
                 let restore_s = match placement.l.as_deref() {
-                    Some("restore") if restore.restore_seconds > 0.0 => Some(restore.restore_seconds),
-                    Some("repair_with_site") if restore.depot_repair_seconds > 0.0 => Some(restore.depot_repair_seconds),
+                    Some("restore") if restore.restore_seconds > 0.0 => {
+                        Some(restore.restore_seconds)
+                    }
+                    Some("repair_with_site") if restore.depot_repair_seconds > 0.0 => {
+                        Some(restore.depot_repair_seconds)
+                    }
                     _ => None,
                 };
                 let mobile = route.map(|route| {
-                    let mut points: Vec<V2> = route.pts.chunks_exact(2).map(|c| V2(c[0], c[1])).collect();
+                    let mut points: Vec<V2> =
+                        route.pts.chunks_exact(2).map(|c| V2(c[0], c[1])).collect();
                     if route.closed {
                         points.push(points[0]);
                     }
                     // Ships are capped by their own top speed; the routes ask for more.
-                    let kph = pack.core.units.get(&placement.u).and_then(|u| u.kph).unwrap_or(40.0).min(if route.speed_kph > 0.0 { route.speed_kph } else { 1e9 });
-                    motions.push(Motion { path: crate::geo::Path::new(points), speed: kph / 3.6, s_ref: 0.0, t_ref: 0.0, anchored: false, timed: false, last_obs: None });
+                    let kph = pack
+                        .core
+                        .units
+                        .get(&placement.u)
+                        .and_then(|u| u.kph)
+                        .unwrap_or(40.0)
+                        .min(if route.speed_kph > 0.0 {
+                            route.speed_kph
+                        } else {
+                            1e9
+                        });
+                    motions.push(Motion {
+                        path: crate::geo::Path::new(points),
+                        speed: kph / 3.6,
+                        s_ref: 0.0,
+                        t_ref: 0.0,
+                        anchored: false,
+                        timed: false,
+                        last_obs: None,
+                    });
                     (motions.len() - 1) as u16
                 });
                 site_units[si].push(units.len() as u32);
@@ -225,7 +251,16 @@ impl World {
             });
         }
         let original: Vec<u8> = var.sites.iter().map(|site| site.team).collect();
-        let capturable = var.sites.iter().map(|site| matches!(site.cat.as_str(), "strongpoint" | "assembly_area" | "fuel_factory" | "ammo_factory" | "airfield")).collect();
+        let capturable = var
+            .sites
+            .iter()
+            .map(|site| {
+                matches!(
+                    site.cat.as_str(),
+                    "strongpoint" | "assembly_area" | "fuel_factory" | "ammo_factory" | "airfield"
+                )
+            })
+            .collect();
         World {
             level,
             variant,
@@ -267,7 +302,12 @@ impl World {
                 if foreign && !self.capturable[unit.site as usize] {
                     return;
                 }
-                pairs.push((d + if foreign { FOREIGN_PENALTY_M } else { 0.0 }, ii, index, foreign));
+                pairs.push((
+                    d + if foreign { FOREIGN_PENALTY_M } else { 0.0 },
+                    ii,
+                    index,
+                    foreign,
+                ));
             });
         }
         pairs.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
@@ -288,8 +328,14 @@ impl World {
         if pairs.len() < 8 {
             return;
         }
-        let mut dx: Vec<f64> = pairs.iter().map(|(p, i)| p.0 - self.units[*i as usize].pos.0).collect();
-        let mut dz: Vec<f64> = pairs.iter().map(|(p, i)| p.1 - self.units[*i as usize].pos.1).collect();
+        let mut dx: Vec<f64> = pairs
+            .iter()
+            .map(|(p, i)| p.0 - self.units[*i as usize].pos.0)
+            .collect();
+        let mut dz: Vec<f64> = pairs
+            .iter()
+            .map(|(p, i)| p.1 - self.units[*i as usize].pos.1)
+            .collect();
         dx.sort_by(|a, b| a.partial_cmp(b).unwrap());
         dz.sort_by(|a, b| a.partial_cmp(b).unwrap());
         let median = V2(dx[dx.len() / 2], dz[dz.len() / 2]);
@@ -298,7 +344,9 @@ impl World {
 
     /// Kept for callers that match one icon at a time.
     pub fn match_icon(&self, position: V2, team: Option<u8>) -> Option<u32> {
-        self.assign(&[(position, team)])[0].filter(|(_, foreign)| !foreign).map(|(index, _)| index)
+        self.assign(&[(position, team)])[0]
+            .filter(|(_, foreign)| !foreign)
+            .map(|(index, _)| index)
     }
 
     /// Ships are placed on their routes from the battle clock until one is seen.
@@ -334,10 +382,18 @@ impl World {
             }
             let motion = &self.motions[mi as usize];
             let predicted = motion.at(now).0;
-            let since = if unit.seen_at.is_finite() { now - unit.seen_at } else { f64::INFINITY };
+            let since = if unit.seen_at.is_finite() {
+                now - unit.seen_at
+            } else {
+                f64::INFINITY
+            };
             // Close to where it should be, or anywhere on its route while its
             // position is still only a guess.
-            let gate = if motion.anchored { 1500.0 + 20.0 * since.min(600.0) } else { f64::INFINITY };
+            let gate = if motion.anchored {
+                1500.0 + 20.0 * since.min(600.0)
+            } else {
+                f64::INFINITY
+            };
             for (ii, (position, team)) in icons.iter().enumerate() {
                 if team.is_some_and(|t| t != unit.team) {
                     continue;
@@ -348,7 +404,15 @@ impl World {
                 }
                 let d = position.dist(predicted);
                 if d <= gate {
-                    pairs.push((if motion.anchored { d } else { off_route + d * 0.05 }, ii, index as u32));
+                    pairs.push((
+                        if motion.anchored {
+                            d
+                        } else {
+                            off_route + d * 0.05
+                        },
+                        ii,
+                        index as u32,
+                    ));
                 }
             }
         }
@@ -394,7 +458,11 @@ impl World {
     /// Updates who holds each capturable site from this frame's occupiers:
     /// `occupiers[site] = Some((team, icons))`, `owner_seen[site]` = owner's
     /// units on the map there now. Returns sites that changed hands.
-    pub fn update_owners(&mut self, occupiers: &HashMap<u16, (u8, u32)>, now: f64) -> Vec<(u16, u8)> {
+    pub fn update_owners(
+        &mut self,
+        occupiers: &HashMap<u16, (u8, u32)>,
+        now: f64,
+    ) -> Vec<(u16, u8)> {
         let mut changed = Vec::new();
         for site in 0..self.owner.len() {
             if !self.capturable[site] || self.owner_proof[site] == Proof::Manual {
@@ -406,7 +474,11 @@ impl World {
             });
             let size = self.site_units[site].len() as u32;
             match occupiers.get(&(site as u16)) {
-                Some(&(team, count)) if team != self.owner[site] && !owner_visible && count >= size.min(2).max(1) => {
+                Some(&(team, count))
+                    if team != self.owner[site]
+                        && !owner_visible
+                        && count >= size.min(2).max(1) =>
+                {
                     let since = match self.occupied_since[site] {
                         Some((t, at)) if t == team => at,
                         _ => {
@@ -433,14 +505,26 @@ impl World {
         }
         let flipped = self.owner[si] != team;
         self.owner[si] = team;
-        self.owner_proof[si] = if team == self.original[si] && proof == Proof::Manual { Proof::None } else { proof };
+        self.owner_proof[si] = if team == self.original[si] && proof == Proof::Manual {
+            Proof::None
+        } else {
+            proof
+        };
         self.occupied_since[si] = None;
         if flipped {
             for &index in &self.site_units[si] {
                 let unit = &mut self.units[index as usize];
                 unit.team = team;
-                unit.status = if proof == Proof::Manual { Status::Unknown } else { Status::Alive };
-                unit.proof = if proof == Proof::Manual { Proof::None } else { Proof::Confirmed };
+                unit.status = if proof == Proof::Manual {
+                    Status::Unknown
+                } else {
+                    Status::Alive
+                };
+                unit.proof = if proof == Proof::Manual {
+                    Proof::None
+                } else {
+                    Proof::Confirmed
+                };
                 unit.destroyed_at = None;
                 unit.lost_at = None;
                 if proof != Proof::Manual {
@@ -481,15 +565,27 @@ impl World {
         // newly vanished
         for index in 0..self.units.len() {
             let unit = &mut self.units[index];
-            if unit.lost_at.is_none() && unit.seen_at.is_finite() && !unit.visible(now) && unit.status == Status::Alive {
+            if unit.lost_at.is_none()
+                && unit.seen_at.is_finite()
+                && !unit.visible(now)
+                && unit.status == Status::Alive
+            {
                 unit.lost_at = Some(unit.seen_at);
                 self.recent_vanish.push_back((index as u32, unit.seen_at));
             }
         }
-        while self.recent_vanish.front().is_some_and(|(_, at)| now - at > 120.0) {
+        while self
+            .recent_vanish
+            .front()
+            .is_some_and(|(_, at)| now - at > 120.0)
+        {
             self.recent_vanish.pop_front();
         }
-        while self.pending.front().is_some_and(|kill| now - kill.at > 900.0) {
+        while self
+            .pending
+            .front()
+            .is_some_and(|kill| now - kill.at > 900.0)
+        {
             self.pending.pop_front();
         }
 
@@ -515,7 +611,9 @@ impl World {
         let wait = self.detect_loss_s + 5.0;
         for index in 0..self.units.len() {
             let unit = &self.units[index];
-            let Some(lost_at) = unit.lost_at else { continue };
+            let Some(lost_at) = unit.lost_at else {
+                continue;
+            };
             if unit.status != Status::Alive {
                 continue;
             }
@@ -534,7 +632,11 @@ impl World {
             }
             // A waiting kill-feed line for this unit type makes it certain.
             let id = unit.id.clone();
-            let proof = match self.pending.iter().position(|kill| kill.ids.contains(&id) && (kill.at - lost_at).abs() < 120.0) {
+            let proof = match self
+                .pending
+                .iter()
+                .position(|kill| kill.ids.contains(&id) && (kill.at - lost_at).abs() < 120.0)
+            {
                 Some(pi) => {
                     self.pending.remove(pi);
                     Proof::Confirmed
@@ -558,8 +660,15 @@ impl World {
                     kill.ids.contains(&unit.id) && unit.status != Status::Destroyed
                 })
                 .collect();
-            let possible: Vec<u32> = candidates.iter().copied().filter(|&i| self.units[i as usize].seen_at < kill.at + 1.0).collect();
-            if candidates.len() >= 2 && possible.len() == 1 && !eliminated.iter().any(|(_, i)| *i == possible[0]) {
+            let possible: Vec<u32> = candidates
+                .iter()
+                .copied()
+                .filter(|&i| self.units[i as usize].seen_at < kill.at + 1.0)
+                .collect();
+            if candidates.len() >= 2
+                && possible.len() == 1
+                && !eliminated.iter().any(|(_, i)| *i == possible[0])
+            {
                 eliminated.push((pi, possible[0]));
             }
         }
@@ -579,11 +688,19 @@ impl World {
             .iter()
             .filter(|(index, at)| {
                 let unit = &self.units[*index as usize];
-                (kill_at - at).abs() < PAIR_S && ids.contains(&unit.id) && unit.status == Status::Alive && unit.lost_at.is_some()
+                (kill_at - at).abs() < PAIR_S
+                    && ids.contains(&unit.id)
+                    && unit.status == Status::Alive
+                    && unit.lost_at.is_some()
             })
             .map(|(index, at)| (*index, *at))
             .collect();
-        near.sort_by(|a, b| (kill_at - a.1).abs().partial_cmp(&(kill_at - b.1).abs()).unwrap());
+        near.sort_by(|a, b| {
+            (kill_at - a.1)
+                .abs()
+                .partial_cmp(&(kill_at - b.1).abs())
+                .unwrap()
+        });
         for &(index, at) in &near {
             let unit = &self.units[index as usize];
             // Friendly units are always on the map, so vanishing is enough.
@@ -596,7 +713,8 @@ impl World {
         }
         // A unit with no neighbours (or a ship) can only be judged by timing.
         if let [(index, at)] = near[..] {
-            let lone = self.neighbours[index as usize].is_empty() || self.units[index as usize].mobile.is_some();
+            let lone = self.neighbours[index as usize].is_empty()
+                || self.units[index as usize].mobile.is_some();
             if lone && (kill_at - at).abs() < 4.0 && now - at >= WITNESS_HOLD_S {
                 return Some(index);
             }
@@ -613,15 +731,21 @@ impl World {
     }
 
     /// Feeds one kill-feed line that names a unit type.
-    pub fn kill_feed(&mut self, ids: &[String], now: f64, names: &HashMap<String, crate::pack::UnitSpec>) -> KillOutcome {
-        let name = ids
-            .first()
-            .and_then(|id| names.get(id))
-            .map_or_else(|| ids.first().cloned().unwrap_or_default(), |spec| spec.short().to_string());
+    pub fn kill_feed(
+        &mut self,
+        ids: &[String],
+        now: f64,
+        names: &HashMap<String, crate::pack::UnitSpec>,
+    ) -> KillOutcome {
+        let name = ids.first().and_then(|id| names.get(id)).map_or_else(
+            || ids.first().cloned().unwrap_or_default(),
+            |spec| spec.short().to_string(),
+        );
         let candidates: Vec<u32> = (0..self.units.len() as u32)
             .filter(|&i| {
                 let unit = &self.units[i as usize];
-                ids.contains(&unit.id) && !(unit.status == Status::Destroyed && unit.proof != Proof::Likely)
+                ids.contains(&unit.id)
+                    && !(unit.status == Status::Destroyed && unit.proof != Proof::Likely)
             })
             .collect();
         if candidates.is_empty() {
@@ -630,20 +754,33 @@ impl World {
         // An earlier "likely" call for this type is now confirmed.
         if let Some(&index) = candidates.iter().find(|&&i| {
             let unit = &self.units[i as usize];
-            unit.status == Status::Destroyed && unit.proof == Proof::Likely && unit.destroyed_at.is_some_and(|at| (now - at).abs() < 60.0)
+            unit.status == Status::Destroyed
+                && unit.proof == Proof::Likely
+                && unit.destroyed_at.is_some_and(|at| (now - at).abs() < 60.0)
         }) {
             self.units[index as usize].proof = Proof::Confirmed;
             return KillOutcome::Located(self.units[index as usize].site, name);
         }
-        let alive: Vec<u32> = candidates.iter().copied().filter(|&i| self.units[i as usize].status != Status::Destroyed).collect();
-        let pick = if alive.len() == 1 { Some(alive[0]) } else { self.vanished_candidate(ids, now, now) };
+        let alive: Vec<u32> = candidates
+            .iter()
+            .copied()
+            .filter(|&i| self.units[i as usize].status != Status::Destroyed)
+            .collect();
+        let pick = if alive.len() == 1 {
+            Some(alive[0])
+        } else {
+            self.vanished_candidate(ids, now, now)
+        };
         match pick {
             Some(index) => {
                 self.destroy(index, Proof::Confirmed, now);
                 KillOutcome::Located(self.units[index as usize].site, name)
             }
             None => {
-                self.pending.push_back(PendingKill { ids: ids.to_vec(), at: now });
+                self.pending.push_back(PendingKill {
+                    ids: ids.to_vec(),
+                    at: now,
+                });
                 KillOutcome::Unlocated(name)
             }
         }
@@ -653,9 +790,37 @@ impl World {
         self.pending.len()
     }
 
+    /// For each kill-feed line not yet tied to a unit: the units it can still
+    /// be, i.e. of the named type, not destroyed, and not seen alive since.
+    pub fn suspects(&self, now: f64) -> Vec<(String, f64, Vec<u32>)> {
+        self.pending
+            .iter()
+            .map(|kill| {
+                let units = (0..self.units.len() as u32)
+                    .filter(|&i| {
+                        let unit = &self.units[i as usize];
+                        kill.ids.contains(&unit.id)
+                            && unit.status != Status::Destroyed
+                            && unit.seen_at < kill.at + 1.0
+                            && !unit.visible(now)
+                    })
+                    .collect();
+                (
+                    kill.ids.first().cloned().unwrap_or_default(),
+                    now - kill.at,
+                    units,
+                )
+            })
+            .collect()
+    }
+
     /// Manual mark for a whole site or one unit of it.
     pub fn mark(&mut self, site: u16, slot: Option<u16>, destroyed: Option<bool>, now: f64) {
-        for unit in self.units.iter_mut().filter(|u| u.site == site && slot.map_or(true, |s| s == u.slot)) {
+        for unit in self
+            .units
+            .iter_mut()
+            .filter(|u| u.site == site && slot.map_or(true, |s| s == u.slot))
+        {
             match destroyed {
                 Some(true) => {
                     unit.status = Status::Destroyed;
@@ -700,7 +865,10 @@ pub fn parse_kill(text: &str, pack: &Pack) -> Option<Vec<String>> {
             break;
         }
     }
-    let victim = victim_part?.trim().trim_matches(|c: char| c == '.' || c == '!' || c == ':').trim();
+    let victim = victim_part?
+        .trim()
+        .trim_matches(|c: char| c == '.' || c == '!' || c == ':')
+        .trim();
     if victim.is_empty() {
         return None;
     }

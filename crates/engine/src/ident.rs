@@ -122,7 +122,10 @@ struct LevelIndex {
 }
 
 fn nearest(points: &[V2], p: V2) -> f64 {
-    points.iter().map(|q| q.dist(p)).fold(f64::INFINITY, f64::min)
+    points
+        .iter()
+        .map(|q| q.dist(p))
+        .fold(f64::INFINITY, f64::min)
 }
 
 pub struct Identifier {
@@ -159,10 +162,27 @@ impl Identifier {
                 let runways = standard
                     .sites
                     .iter()
-                    .flat_map(|site| site.rw.iter().map(move |r| (V2((r[0] + r[2]) / 2.0, (r[1] + r[3]) / 2.0), site.team)))
+                    .flat_map(|site| {
+                        site.rw
+                            .iter()
+                            .map(move |r| (V2((r[0] + r[2]) / 2.0, (r[1] + r[3]) / 2.0), site.team))
+                    })
                     .collect();
-                let half = |team: u8| standard.sites.iter().filter(|s| s.team == team && s.moves.is_none()).map(|s| s.p).collect();
-                LevelIndex { meta, grid, runways, half_a: half(1), half_b: half(2) }
+                let half = |team: u8| {
+                    standard
+                        .sites
+                        .iter()
+                        .filter(|s| s.team == team && s.moves.is_none())
+                        .map(|s| s.p)
+                        .collect()
+                };
+                LevelIndex {
+                    meta,
+                    grid,
+                    runways,
+                    half_a: half(1),
+                    half_b: half(2),
+                }
             })
             .collect();
         Identifier {
@@ -189,7 +209,10 @@ impl Identifier {
 
     pub fn see_airfields(&mut self, airfields: Vec<(V2, Aff)>) {
         if airfields.len() != self.airfields.len()
-            || airfields.iter().zip(&self.airfields).any(|(a, b)| a.1 != b.1 || a.0.dist(b.0) > 50.0)
+            || airfields
+                .iter()
+                .zip(&self.airfields)
+                .any(|(a, b)| a.1 != b.1 || a.0.dist(b.0) > 50.0)
         {
             self.airfields = airfields;
             self.dirty = true;
@@ -200,7 +223,10 @@ impl Identifier {
         if self.cells.len() >= 6000 {
             return;
         }
-        let key = ((position.0 / CELL_M).floor() as i32, (position.1 / CELL_M).floor() as i32);
+        let key = (
+            (position.0 / CELL_M).floor() as i32,
+            (position.1 / CELL_M).floor() as i32,
+        );
         let cell = self.cells.entry(key).or_insert((position, aff, 0));
         cell.1 = aff;
         cell.2 = cell.2.saturating_add(1);
@@ -226,7 +252,14 @@ impl Identifier {
 
     /// Fingerprint score per [variant][my team - 1][era] at a match radius,
     /// plus how many fixed icons matched anything.
-    fn fingerprint(&self, index: &LevelIndex, variants: usize, eras: usize, radius: f64, penalise_missing: bool) -> (Vec<[Vec<u32>; 2]>, u32) {
+    fn fingerprint(
+        &self,
+        index: &LevelIndex,
+        variants: usize,
+        eras: usize,
+        radius: f64,
+        penalise_missing: bool,
+    ) -> (Vec<[Vec<u32>; 2]>, u32) {
         let mut score = vec![[vec![0u32; eras], vec![0u32; eras]]; variants];
         let mut matched = 0u32;
         for (position, aff, hits) in self.cells.values() {
@@ -274,7 +307,9 @@ impl Identifier {
         }
         if friendly_seen >= 15 {
             for (i, &(vi, team, mask)) in index.meta.iter().enumerate() {
-                if !(1..=2).contains(&team) || seen.nearest(index.grid.point(i as u32), radius).is_some() {
+                if !(1..=2).contains(&team)
+                    || seen.nearest(index.grid.point(i as u32), radius).is_some()
+                {
                     continue;
                 }
                 for (ei, slot) in score[vi as usize][team as usize - 1].iter_mut().enumerate() {
@@ -290,7 +325,13 @@ impl Identifier {
     /// Re-evaluates when new evidence arrived. Returns true if the identity
     /// (not just its confidence) changed. `vehicle` is the player's vehicle
     /// as (economic rank, country).
-    pub fn evaluate(&mut self, pack: &Pack, frame: Option<MapFrame>, vehicle: Option<(i32, &str)>, manual: &Manual) -> bool {
+    pub fn evaluate(
+        &mut self,
+        pack: &Pack,
+        frame: Option<MapFrame>,
+        vehicle: Option<(i32, &str)>,
+        manual: &Manual,
+    ) -> bool {
         if !self.dirty {
             return false;
         }
@@ -325,7 +366,10 @@ impl Identifier {
         }
 
         // ---- map
-        let manual_level = manual.level.as_ref().and_then(|id| pack.levels.iter().position(|l| &l.id == id));
+        let manual_level = manual
+            .level
+            .as_ref()
+            .and_then(|id| pack.levels.iter().position(|l| &l.id == id));
         let mut level_scores: Vec<(usize, usize)> = Vec::new();
         for (li, level) in pack.levels.iter().enumerate() {
             if let Some(frame) = frame {
@@ -337,7 +381,12 @@ impl Identifier {
             let hits = self
                 .airfields
                 .iter()
-                .filter(|(p, _)| self.index[li].runways.iter().any(|(r, _)| r.dist(*p) < RUNWAY_MATCH_M))
+                .filter(|(p, _)| {
+                    self.index[li]
+                        .runways
+                        .iter()
+                        .any(|(r, _)| r.dist(*p) < RUNWAY_MATCH_M)
+                })
                 .count();
             level_scores.push((li, hits));
         }
@@ -350,14 +399,22 @@ impl Identifier {
             let second = level_scores.get(1).map_or(0, |s| s.1);
             if hits >= 2 && hits > second {
                 next.level = Some(li);
-                next.level_conf = if hits >= 3 { Confidence::Confirmed } else { Confidence::Likely };
-                next.why.push(format!("Map: {hits} runways match {}.", pack.levels[li].name));
+                next.level_conf = if hits >= 3 {
+                    Confidence::Confirmed
+                } else {
+                    Confidence::Likely
+                };
+                next.why.push(format!(
+                    "Map: {hits} runways match {}.",
+                    pack.levels[li].name
+                ));
             } else if level_scores.len() == 1 && frame.is_some() && self.airfields.len() < 2 {
                 // Same size and no runways seen yet. Once runways are visible
                 // and none fits, this is a map the data pack does not know.
                 next.level = Some(li);
                 next.level_conf = Confidence::Guess;
-                next.why.push(format!("Map: only {} has this size.", pack.levels[li].name));
+                next.why
+                    .push(format!("Map: only {} has this size.", pack.levels[li].name));
             }
             diag.runways_matched = hits;
         }
@@ -371,7 +428,13 @@ impl Identifier {
         // ---- which half of the map is friendly
         let (mut at_a, mut at_b) = (0u32, 0u32);
         for (p, aff) in &self.airfields {
-            let Some((_, team)) = index.runways.iter().find(|(r, _)| r.dist(*p) < RUNWAY_MATCH_M) else { continue };
+            let Some((_, team)) = index
+                .runways
+                .iter()
+                .find(|(r, _)| r.dist(*p) < RUNWAY_MATCH_M)
+            else {
+                continue;
+            };
             match (aff, team) {
                 (Aff::Ally, 1) | (Aff::Enemy, 2) => at_a += 4,
                 (Aff::Ally, 2) | (Aff::Enemy, 1) => at_b += 4,
@@ -385,7 +448,10 @@ impl Identifier {
             if *hits < STATIC_HITS {
                 continue;
             }
-            let (da, db) = (nearest(&index.half_a, *position), nearest(&index.half_b, *position));
+            let (da, db) = (
+                nearest(&index.half_a, *position),
+                nearest(&index.half_b, *position),
+            );
             if (da - db).abs() < 1500.0 {
                 continue;
             }
@@ -420,19 +486,26 @@ impl Identifier {
         }
         diag.half_votes = (at_a, at_b);
         let (winner, loser) = (at_a.max(at_b), at_a.min(at_b));
-        let ally_at_a = if winner >= 3 && winner >= loser * 2 + 1 { Some(at_a > at_b) } else { None };
+        let ally_at_a = if winner >= 3 && winner >= loser * 2 + 1 {
+            Some(at_a > at_b)
+        } else {
+            None
+        };
         let half_strong = winner >= 10 && winner >= loser * 4;
 
         // ---- ground-unit fingerprint
         let variants = level.variants.len();
         let (exact, matched_exact) = self.fingerprint(index, variants, eras.len(), MATCH_M, true);
-        let (coarse, matched_coarse) = self.fingerprint(index, variants, eras.len(), COARSE_MATCH_M, false);
+        let (coarse, matched_coarse) =
+            self.fingerprint(index, variants, eras.len(), COARSE_MATCH_M, false);
         diag.matched_exact = matched_exact;
         diag.matched_coarse = matched_coarse;
         let fixed = diag.fixed_friendly + diag.fixed_enemy + diag.fixed_other;
         // Positions that do not line up exactly (but do roughly) mean the
         // mission data is slightly off: fall back to site-level matching.
-        let use_coarse = fixed >= 20 && (matched_exact as usize) * 3 < fixed && (matched_coarse as usize) * 2 >= fixed;
+        let use_coarse = fixed >= 20
+            && (matched_exact as usize) * 3 < fixed
+            && (matched_coarse as usize) * 2 >= fixed;
         diag.used_coarse = use_coarse;
         let score = if use_coarse { coarse } else { exact };
 
@@ -457,7 +530,10 @@ impl Identifier {
         }
 
         // ---- candidates: (total, evidence from the map alone, variant, team, era)
-        let manual_variant = manual.variant.as_ref().and_then(|id| level.variants.iter().position(|v| &v.id == id));
+        let manual_variant = manual
+            .variant
+            .as_ref()
+            .and_then(|id| level.variants.iter().position(|v| &v.id == id));
         let manual_era = manual.era.as_ref().and_then(|id| pack.era_index(id));
         let era_allowed = |ei: usize| vehicle_rank.map_or(true, |rank| eras[ei].rank[1] >= rank);
         let mut ranked: Vec<(u32, u32, usize, u8, usize)> = Vec::new();
@@ -477,11 +553,17 @@ impl Identifier {
                     }
                 }
                 for ei in 0..eras.len() {
-                    if manual_era.is_some_and(|m| m != ei) || (manual_era.is_none() && !era_allowed(ei)) {
+                    if manual_era.is_some_and(|m| m != ei)
+                        || (manual_era.is_none() && !era_allowed(ei))
+                    {
                         continue;
                     }
                     let seen = score[vi][my as usize - 1][ei] + 5 * hud_votes[ei];
-                    let bonus = if diag.nation_team == Some(my) { NATION_BONUS } else { 0 };
+                    let bonus = if diag.nation_team == Some(my) {
+                        NATION_BONUS
+                    } else {
+                        0
+                    };
                     ranked.push((seen + bonus, seen, vi, my, ei));
                 }
             }
@@ -495,7 +577,12 @@ impl Identifier {
         let side = |c: &(u32, u32, usize, u8, usize)| (c.2, c.3);
 
         // side (layout + team)
-        let rival_seen = ranked.iter().filter(|c| side(c) != side(&best)).map(|c| c.1).max().unwrap_or(0);
+        let rival_seen = ranked
+            .iter()
+            .filter(|c| side(c) != side(&best))
+            .map(|c| c.1)
+            .max()
+            .unwrap_or(0);
         let rival_exists = ranked.iter().any(|c| side(c) != side(&best));
         let side_fixed = manual_variant.is_some() && manual.team.is_some();
         let margin = best.1.saturating_sub(rival_seen);
@@ -513,11 +600,19 @@ impl Identifier {
         };
         // Show a best guess as soon as there is anything to go on, rather
         // than leaving the map on whatever was selected before.
-        if next.side_conf != Confidence::Guess || ally_at_a.is_some() || diag.nation_team.is_some() || best.1 > 0 {
+        if next.side_conf != Confidence::Guess
+            || ally_at_a.is_some()
+            || diag.nation_team.is_some()
+            || best.1 > 0
+        {
             next.variant = Some(best.2);
             next.team = Some(best.3);
         }
-        let layout = if level.variants[best.2].mirror { "swapped" } else { "standard" };
+        let layout = if level.variants[best.2].mirror {
+            "swapped"
+        } else {
+            "standard"
+        };
         if side_fixed {
             next.why.push("Side chosen by you.".into());
         } else if next.variant.is_none() {
@@ -525,43 +620,81 @@ impl Identifier {
         } else {
             let mut reasons = Vec::new();
             if let Some(at_a) = ally_at_a {
-                let whose = if at_a { "USSR side normally starts" } else { "NATO side normally starts" };
+                let whose = if at_a {
+                    "USSR side normally starts"
+                } else {
+                    "NATO side normally starts"
+                };
                 reasons.push(format!("your side's units stand where the {whose} ({winner} signs for, {loser} against)"));
             }
             if nation_agrees {
-                reasons.push(format!("your vehicle's nation ({}) flies for the {} side", diag.nation, if best.3 == 1 { "USSR" } else { "NATO" }));
+                reasons.push(format!(
+                    "your vehicle's nation ({}) flies for the {} side",
+                    diag.nation,
+                    if best.3 == 1 { "USSR" } else { "NATO" }
+                ));
             }
             if best.1 > 0 {
-                reasons.push(format!("{} ground units fit{}", best.1, if use_coarse { " (roughly)" } else { "" }));
+                reasons.push(format!(
+                    "{} ground units fit{}",
+                    best.1,
+                    if use_coarse { " (roughly)" } else { "" }
+                ));
             }
-            let team = if best.3 == 1 { "USSR & China" } else { "NATO & allies" };
-            next.why.push(format!("Side: {team}, {layout} positions - {}.", reasons.join("; ")));
+            let team = if best.3 == 1 {
+                "USSR & China"
+            } else {
+                "NATO & allies"
+            };
+            next.why.push(format!(
+                "Side: {team}, {layout} positions - {}.",
+                reasons.join("; ")
+            ));
         }
 
         // BR bracket, judged inside the winning side
-        let same_side: Vec<&(u32, u32, usize, u8, usize)> = ranked.iter().filter(|c| side(c) == side(&best)).collect();
+        let same_side: Vec<&(u32, u32, usize, u8, usize)> =
+            ranked.iter().filter(|c| side(c) == side(&best)).collect();
         let top = same_side.iter().map(|c| c.1).max().unwrap_or(0);
-        let mut options: Vec<usize> = same_side.iter().filter(|c| top.saturating_sub(c.1) <= (top / 20).max(1)).map(|c| c.4).collect();
+        let mut options: Vec<usize> = same_side
+            .iter()
+            .filter(|c| top.saturating_sub(c.1) <= (top / 20).max(1))
+            .map(|c| c.4)
+            .collect();
         options.sort();
         options.dedup();
-        let vehicle_era = vehicle_rank.and_then(|rank| eras.iter().position(|e| rank >= e.rank[0] && rank <= e.rank[1]));
+        let vehicle_era = vehicle_rank.and_then(|rank| {
+            eras.iter()
+                .position(|e| rank >= e.rank[0] && rank <= e.rank[1])
+        });
         if let Some(ei) = manual_era {
             next.era = Some(ei);
             next.era_conf = Confidence::Manual;
             next.why.push("BR bracket chosen by you.".into());
         } else if options.len() == 1 && top >= 8 && !use_coarse {
             next.era = Some(options[0]);
-            next.era_conf = if top >= 16 { Confidence::Confirmed } else { Confidence::Likely };
-            next.why.push(format!("BR bracket: {top} unit positions fit {} only.", eras[options[0]].label));
+            next.era_conf = if top >= 16 {
+                Confidence::Confirmed
+            } else {
+                Confidence::Likely
+            };
+            next.why.push(format!(
+                "BR bracket: {top} unit positions fit {} only.",
+                eras[options[0]].label
+            ));
         } else {
             // Several brackets fit: prefer the one the player's vehicle sits in,
             // then the lowest one that still fits.
-            let pick = vehicle_era.filter(|e| options.contains(e)).or_else(|| options.first().copied());
+            let pick = vehicle_era
+                .filter(|e| options.contains(e))
+                .or_else(|| options.first().copied());
             next.era = pick;
             next.era_conf = Confidence::Guess;
             next.era_options = options;
             next.why.push(match vehicle_era {
-                Some(e) if pick == Some(e) => format!("BR bracket: guessed from your vehicle ({}).", eras[e].label),
+                Some(e) if pick == Some(e) => {
+                    format!("BR bracket: guessed from your vehicle ({}).", eras[e].label)
+                }
                 _ => "BR bracket: not enough units seen yet.".into(),
             });
         }
@@ -571,7 +704,12 @@ impl Identifier {
 
     fn commit(&mut self, next: Identity) -> bool {
         let changed = (next.level, next.variant, next.team, next.era)
-            != (self.identity.level, self.identity.variant, self.identity.team, self.identity.era);
+            != (
+                self.identity.level,
+                self.identity.variant,
+                self.identity.team,
+                self.identity.era,
+            );
         self.identity = next;
         changed
     }

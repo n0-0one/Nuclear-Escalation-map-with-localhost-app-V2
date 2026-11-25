@@ -97,7 +97,16 @@ impl Host {
         let link = game_base.as_deref().map_or_else(Link::new, Link::with_base);
         let latest = Arc::new(serde_json::to_string(&engine.snapshot()).unwrap_or_default());
         let host = Host {
-            inner: Arc::new(Mutex::new(Inner { engine, demo: None, link, latest, settings_path, record_dir, recorder: None, game_base })),
+            inner: Arc::new(Mutex::new(Inner {
+                engine,
+                demo: None,
+                link,
+                latest,
+                settings_path,
+                record_dir,
+                recorder: None,
+                game_base,
+            })),
             stop: Arc::new(AtomicBool::new(false)),
         };
         let worker = host.clone();
@@ -148,8 +157,20 @@ impl Host {
                 let snapshot = inner.engine.snapshot();
                 let mut value = serde_json::to_value(&snapshot).unwrap_or(Value::Null);
                 if let Value::Object(map) = &mut value {
-                    map.insert("demo".into(), json!(inner.demo.as_ref().map(|d| json!({"speed": d.speed, "t": d.sim.t.round()}))));
-                    map.insert("recording".into(), json!(inner.recorder.as_ref().map(|r| r.path.display().to_string())));
+                    map.insert(
+                        "demo".into(),
+                        json!(inner
+                            .demo
+                            .as_ref()
+                            .map(|d| json!({"speed": d.speed, "t": d.sim.t.round()}))),
+                    );
+                    map.insert(
+                        "recording".into(),
+                        json!(inner
+                            .recorder
+                            .as_ref()
+                            .map(|r| r.path.display().to_string())),
+                    );
                 }
                 let text = value.to_string();
                 inner.latest = Arc::new(text.clone());
@@ -197,7 +218,10 @@ impl Host {
                     if let Some(parent) = path.parent() {
                         let _ = std::fs::create_dir_all(parent);
                     }
-                    let _ = std::fs::write(path, serde_json::to_vec_pretty(inner.engine.settings()).unwrap_or_default());
+                    let _ = std::fs::write(
+                        path,
+                        serde_json::to_vec_pretty(inner.engine.settings()).unwrap_or_default(),
+                    );
                 }
                 Ok(json!(inner.engine.settings()))
             }
@@ -207,8 +231,15 @@ impl Host {
                 Ok(Value::Null)
             }
             "capture" => {
-                let site = args.get("site").and_then(Value::as_u64).ok_or("site missing")? as u16;
-                let team = args.get("team").and_then(Value::as_u64).map(|t| t as u8).filter(|t| (1..=2).contains(t));
+                let site = args
+                    .get("site")
+                    .and_then(Value::as_u64)
+                    .ok_or("site missing")? as u16;
+                let team = args
+                    .get("team")
+                    .and_then(Value::as_u64)
+                    .map(|t| t as u8)
+                    .filter(|t| (1..=2).contains(t));
                 inner.engine.capture(site, team);
                 Ok(Value::Null)
             }
@@ -219,17 +250,38 @@ impl Host {
             "demo_start" => {
                 let demo: DemoArgs = serde_json::from_value(args).map_err(|e| e.to_string())?;
                 let pack = inner.engine.pack.clone();
-                let level = pack.levels.iter().position(|l| l.id == demo.level).ok_or("Unknown map")?;
-                let variant = demo.variant.as_deref().and_then(|v| pack.levels[level].variants.iter().position(|x| x.id == v)).unwrap_or(0);
-                let era = demo.era.as_deref().and_then(|e| pack.era_index(e)).unwrap_or(pack.core.eras.len() - 1);
+                let level = pack
+                    .levels
+                    .iter()
+                    .position(|l| l.id == demo.level)
+                    .ok_or("Unknown map")?;
+                let variant = demo
+                    .variant
+                    .as_deref()
+                    .and_then(|v| pack.levels[level].variants.iter().position(|x| x.id == v))
+                    .unwrap_or(0);
+                let era = demo
+                    .era
+                    .as_deref()
+                    .and_then(|e| pack.era_index(e))
+                    .unwrap_or(pack.core.eras.len() - 1);
                 let team = if demo.team == 2 { 2 } else { 1 };
-                let seed = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(7, |d| d.as_secs());
+                let seed = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_or(7, |d| d.as_secs());
                 inner.engine.reset_battle();
-                inner.demo = Some(Demo { sim: Sim::new(pack, level, variant, era, team, seed), speed: demo.speed.clamp(0.25, 20.0), last_hud: 0 });
+                inner.demo = Some(Demo {
+                    sim: Sim::new(pack, level, variant, era, team, seed),
+                    speed: demo.speed.clamp(0.25, 20.0),
+                    last_hud: 0,
+                });
                 Ok(Value::Null)
             }
             "demo_speed" => {
-                let speed = args.get("speed").and_then(Value::as_f64).ok_or("speed missing")?;
+                let speed = args
+                    .get("speed")
+                    .and_then(Value::as_f64)
+                    .ok_or("speed missing")?;
                 if let Some(demo) = &mut inner.demo {
                     demo.speed = speed.clamp(0.25, 20.0);
                 }
@@ -238,7 +290,10 @@ impl Host {
             "demo_stop" => {
                 if inner.demo.take().is_some() {
                     inner.engine.reset_battle();
-                    inner.link = inner.game_base.as_deref().map_or_else(Link::new, Link::with_base);
+                    inner.link = inner
+                        .game_base
+                        .as_deref()
+                        .map_or_else(Link::new, Link::with_base);
                 }
                 Ok(Value::Null)
             }
@@ -248,12 +303,26 @@ impl Host {
                     let path = inner.recorder.take().map(|r| r.path.display().to_string());
                     return Ok(json!(path));
                 }
-                let dir = inner.record_dir.clone().ok_or("Recording is not available here")?;
+                let dir = inner
+                    .record_dir
+                    .clone()
+                    .ok_or("Recording is not available here")?;
                 std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-                let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
+                let stamp = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_or(0, |d| d.as_secs());
                 let path = dir.join(format!("battle-{stamp}.jsonl"));
-                let file = std::fs::OpenOptions::new().create_new(true).write(true).open(&path).map_err(|e| e.to_string())?;
-                inner.recorder = Some(Recorder { file, path: path.clone(), bytes: 0, last_objects: f64::NEG_INFINITY });
+                let file = std::fs::OpenOptions::new()
+                    .create_new(true)
+                    .write(true)
+                    .open(&path)
+                    .map_err(|e| e.to_string())?;
+                inner.recorder = Some(Recorder {
+                    file,
+                    path: path.clone(),
+                    bytes: 0,
+                    last_objects: f64::NEG_INFINITY,
+                });
                 Ok(json!(path.display().to_string()))
             }
             "map_image" => {
@@ -261,7 +330,10 @@ impl Host {
                 if inner.demo.is_some() {
                     return Err("Not available in the demo".into());
                 }
-                let bytes = inner.link.map_image().ok_or("The game did not return a map picture")?;
+                let bytes = inner
+                    .link
+                    .map_image()
+                    .ok_or("The game did not return a map picture")?;
                 Ok(json!(bytes))
             }
             other => Err(format!("Unknown command: {other}")),
@@ -277,11 +349,26 @@ impl Recorder {
             return;
         }
         self.last_objects = now;
-        for path in ["/map_obj.json", "/map_info.json", "/indicators", "/state", "/hudmsg?lastEvt=0&lastDmg=0", "/mission.json"] {
+        for path in [
+            "/map_obj.json",
+            "/map_info.json",
+            "/indicators",
+            "/state",
+            "/hudmsg?lastEvt=0&lastDmg=0",
+            "/mission.json",
+        ] {
             let Some(body) = link.raw(path) else { continue };
-            let Ok(parsed) = serde_json::from_str::<Value>(&body) else { continue };
-            let line = json!({"t": (now * 100.0).round() / 100.0, "path": path, "body": parsed}).to_string();
-            if self.file.write_all(line.as_bytes()).and_then(|_| self.file.write_all(b"\n")).is_ok() {
+            let Ok(parsed) = serde_json::from_str::<Value>(&body) else {
+                continue;
+            };
+            let line = json!({"t": (now * 100.0).round() / 100.0, "path": path, "body": parsed})
+                .to_string();
+            if self
+                .file
+                .write_all(line.as_bytes())
+                .and_then(|_| self.file.write_all(b"\n"))
+                .is_ok()
+            {
                 self.bytes += line.len() as u64 + 1;
             }
         }
