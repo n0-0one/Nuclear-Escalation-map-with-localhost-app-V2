@@ -206,6 +206,12 @@ impl Host {
                 inner.engine.mark(mark.site, mark.slot, mark.destroyed);
                 Ok(Value::Null)
             }
+            "capture" => {
+                let site = args.get("site").and_then(Value::as_u64).ok_or("site missing")? as u16;
+                let team = args.get("team").and_then(Value::as_u64).map(|t| t as u8).filter(|t| (1..=2).contains(t));
+                inner.engine.capture(site, team);
+                Ok(Value::Null)
+            }
             "reset_battle" => {
                 inner.engine.reset_battle();
                 Ok(Value::Null)

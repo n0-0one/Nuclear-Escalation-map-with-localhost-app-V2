@@ -154,6 +154,7 @@ pub fn parse_map_obj(text: &str) -> Option<Vec<MapObj>> {
         let kind = match type_name {
             "aircraft" => Kind::Aircraft,
             "ground_model" => Kind::Ground,
+            t if t.contains("ship") || t.contains("boat") => Kind::Ground,
             "airfield" => Kind::Airfield,
             t if t.contains("zone") || t.contains("point") || t.contains("respawn") => Kind::Zone,
             _ => Kind::Other,

@@ -18,9 +18,17 @@ use crate::pack::{Level, Pack};
 use serde::Serialize;
 use std::collections::{HashMap, VecDeque};
 
-/// A map icon within this distance of a mission placement is that unit.
-const MATCH_M: f64 = 30.0;
-const MATCH_APPROX_M: f64 = 70.0;
+/// A map icon within this distance of a mission placement is that unit. The
+/// game's icons can sit tens of metres off the mission position, and each
+/// icon and each unit is used once per frame, nearest pairs first.
+const MATCH_M: f64 = 60.0;
+const MATCH_APPROX_M: f64 = 100.0;
+/// An icon of the other team at a site counts as an occupier this much
+/// worse than one of the site's own team at the same distance.
+const FOREIGN_PENALTY_M: f64 = 25.0;
+/// Occupiers must hold a site this long, with none of the owner's units in
+/// sight there, before the site counts as captured.
+const CAPTURE_HOLD_S: f64 = 4.0;
 /// Units this close count as neighbours that share detection.
 const WITNESS_M: f64 = 450.0;
 /// A kill-feed line and a disappearance this close in time belong together.
@@ -63,6 +71,34 @@ pub struct Unit {
     pub streak_from: f64,
     pub lost_at: Option<f64>,
     pub destroyed_at: Option<f64>,
+    /// Index into `World::motions` for units that move (ships).
+    pub mobile: Option<u16>,
+}
+
+/// How a ship moves: along its closed patrol route at a steady speed.
+#[derive(Debug, Clone)]
+pub struct Motion {
+    pub path: crate::geo::Path,
+    /// Metres per second.
+    pub speed: f64,
+    /// Position along the route at `t_ref`.
+    pub s_ref: f64,
+    pub t_ref: f64,
+    /// The position comes from a sighting (rather than the battle clock or a guess).
+    pub anchored: bool,
+    /// Placed from the battle clock (true) or only guessed (false).
+    pub timed: bool,
+    last_obs: Option<(f64, f64)>,
+}
+
+impl Motion {
+    pub fn s_at(&self, now: f64) -> f64 {
+        let length = self.path.length().max(1.0);
+        (self.s_ref + self.speed * (now - self.t_ref)).rem_euclid(length)
+    }
+    pub fn at(&self, now: f64) -> (V2, V2) {
+        self.path.at(self.s_at(now))
+    }
 }
 
 impl Unit {
@@ -97,9 +133,21 @@ pub struct World {
     pub my_team: u8,
     pub units: Vec<Unit>,
     pub site_units: Vec<Vec<u32>>,
+    pub motions: Vec<Motion>,
+    /// Current owner of each site, and who owned it at the start.
+    pub owner: Vec<u8>,
+    pub original: Vec<u8>,
+    pub owner_proof: Vec<Proof>,
+    capturable: Vec<bool>,
+    occupied_since: Vec<Option<(u8, f64)>>,
     /// Same-team units close enough to share detection, per unit.
     neighbours: Vec<Vec<u32>>,
     grid: Grid,
+    /// Grid entry -> unit index (moving units are not in the grid).
+    grid_unit: Vec<u32>,
+    /// How far the game's icons sit from the mission positions, learned from
+    /// matched pairs (the same shift for the whole map).
+    pub offset: V2,
     pending: VecDeque<PendingKill>,
     recent_vanish: VecDeque<(u32, f64)>,
     detect_loss_s: f64,
@@ -113,9 +161,14 @@ impl World {
         let mut units = Vec::new();
         let mut site_units = vec![Vec::new(); var.sites.len()];
         let mut grid = Grid::new(120.0);
+        let mut grid_unit = Vec::new();
+        let mut motions = Vec::new();
         for (si, site) in var.sites.iter().enumerate() {
-            if site.moves.is_some() {
-                continue; // ships, MLRS and missile launchers do not stay put
+            // Ships move along their routes; rocket artillery and missile
+            // launchers wander inside their areas and are not tracked.
+            let route = site.route.as_ref().filter(|r| site.cat == "ship" && r.pts.len() >= 4);
+            if site.moves.is_some() && route.is_none() {
+                continue;
             }
             for (ui, placement) in site.units.iter().enumerate() {
                 if placement.e >> era & 1 == 0 {
@@ -126,8 +179,21 @@ impl World {
                     Some("repair_with_site") if restore.depot_repair_seconds > 0.0 => Some(restore.depot_repair_seconds),
                     _ => None,
                 };
+                let mobile = route.map(|route| {
+                    let mut points: Vec<V2> = route.pts.chunks_exact(2).map(|c| V2(c[0], c[1])).collect();
+                    if route.closed {
+                        points.push(points[0]);
+                    }
+                    // Ships are capped by their own top speed; the routes ask for more.
+                    let kph = pack.core.units.get(&placement.u).and_then(|u| u.kph).unwrap_or(40.0).min(if route.speed_kph > 0.0 { route.speed_kph } else { 1e9 });
+                    motions.push(Motion { path: crate::geo::Path::new(points), speed: kph / 3.6, s_ref: 0.0, t_ref: 0.0, anchored: false, timed: false, last_obs: None });
+                    (motions.len() - 1) as u16
+                });
                 site_units[si].push(units.len() as u32);
-                grid.insert(placement.p);
+                if mobile.is_none() {
+                    grid.insert(placement.p);
+                    grid_unit.push(units.len() as u32);
+                }
                 units.push(Unit {
                     site: si as u16,
                     slot: ui as u16,
@@ -142,17 +208,24 @@ impl World {
                     streak_from: f64::NEG_INFINITY,
                     lost_at: None,
                     destroyed_at: None,
+                    mobile,
                 });
             }
         }
         let mut neighbours = vec![Vec::new(); units.len()];
         for (index, unit) in units.iter().enumerate() {
-            grid.each_near(unit.pos, WITNESS_M, |other, _| {
+            if unit.mobile.is_some() {
+                continue;
+            }
+            grid.each_near(unit.pos, WITNESS_M, |entry, _| {
+                let other = grid_unit[entry as usize];
                 if other as usize != index && units[other as usize].team == unit.team {
                     neighbours[index].push(other);
                 }
             });
         }
+        let original: Vec<u8> = var.sites.iter().map(|site| site.team).collect();
+        let capturable = var.sites.iter().map(|site| matches!(site.cat.as_str(), "strongpoint" | "assembly_area" | "fuel_factory" | "ammo_factory" | "airfield")).collect();
         World {
             level,
             variant,
@@ -160,31 +233,222 @@ impl World {
             my_team,
             units,
             site_units,
+            motions,
+            owner: original.clone(),
+            owner_proof: vec![Proof::None; original.len()],
+            occupied_since: vec![None; original.len()],
+            original,
+            capturable,
             neighbours,
             grid,
+            grid_unit,
+            offset: V2(0.0, 0.0),
             pending: VecDeque::new(),
             recent_vanish: VecDeque::new(),
             detect_loss_s: var.detect_loss_s,
         }
     }
 
-    /// Finds the fixed unit a map icon stands for. `team` is the icon's team
-    /// when its colour tells us.
+    /// Pairs map icons with fixed units: nearest pairs first, each icon and
+    /// each unit at most once. `icons` are positions with the icon's team when
+    /// its colour tells. Returns, per icon, the unit and whether the icon
+    /// belongs to the other team (an occupier at a capturable site).
+    pub fn assign(&self, icons: &[(V2, Option<u8>)]) -> Vec<Option<(u32, bool)>> {
+        let mut pairs: Vec<(f64, usize, u32, bool)> = Vec::new();
+        for (ii, (raw, team)) in icons.iter().enumerate() {
+            let position = &raw.sub(self.offset);
+            self.grid.each_near(*position, MATCH_APPROX_M, |entry, d| {
+                let index = self.grid_unit[entry as usize];
+                let unit = &self.units[index as usize];
+                if d > if unit.approx { MATCH_APPROX_M } else { MATCH_M } {
+                    return;
+                }
+                let foreign = team.is_some_and(|t| t != unit.team);
+                if foreign && !self.capturable[unit.site as usize] {
+                    return;
+                }
+                pairs.push((d + if foreign { FOREIGN_PENALTY_M } else { 0.0 }, ii, index, foreign));
+            });
+        }
+        pairs.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+        let mut result = vec![None; icons.len()];
+        let mut taken = vec![false; self.units.len()];
+        for (_, ii, index, foreign) in pairs {
+            if result[ii].is_some() || taken[index as usize] {
+                continue;
+            }
+            taken[index as usize] = true;
+            result[ii] = Some((index, foreign));
+        }
+        result
+    }
+
+    /// Learns the map-wide shift from this frame's matched (icon, unit) pairs.
+    pub fn learn_offset(&mut self, pairs: &[(V2, u32)]) {
+        if pairs.len() < 8 {
+            return;
+        }
+        let mut dx: Vec<f64> = pairs.iter().map(|(p, i)| p.0 - self.units[*i as usize].pos.0).collect();
+        let mut dz: Vec<f64> = pairs.iter().map(|(p, i)| p.1 - self.units[*i as usize].pos.1).collect();
+        dx.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        dz.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let median = V2(dx[dx.len() / 2], dz[dz.len() / 2]);
+        self.offset = self.offset.lerp(median, 0.3);
+    }
+
+    /// Kept for callers that match one icon at a time.
     pub fn match_icon(&self, position: V2, team: Option<u8>) -> Option<u32> {
-        let mut best: Option<(u32, f64)> = None;
-        self.grid.each_near(position, MATCH_APPROX_M, |index, d| {
-            let unit = &self.units[index as usize];
-            if team.is_some_and(|t| t != unit.team) {
-                return;
+        self.assign(&[(position, team)])[0].filter(|(_, foreign)| !foreign).map(|(index, _)| index)
+    }
+
+    /// Ships are placed on their routes from the battle clock until one is seen.
+    pub fn place_ships(&mut self, battle_t: Option<f64>, now: f64) {
+        for motion in &mut self.motions {
+            if motion.anchored || (motion.timed && battle_t.is_some()) {
+                continue;
             }
-            if d > if unit.approx { MATCH_APPROX_M } else { MATCH_M } {
-                return;
+            match battle_t {
+                Some(t) => {
+                    motion.s_ref = (motion.speed * t).rem_euclid(motion.path.length().max(1.0));
+                    motion.t_ref = now;
+                    motion.timed = true;
+                }
+                None if motion.t_ref == 0.0 => motion.t_ref = now,
+                None => {}
             }
-            if best.map_or(true, |(_, bd)| d < bd) {
-                best = Some((index, d));
+        }
+        for unit in &mut self.units {
+            if let (Some(mi), true) = (unit.mobile, unit.status != Status::Destroyed) {
+                unit.pos = self.motions[mi as usize].at(now).0;
             }
-        });
-        best.map(|(index, _)| index)
+        }
+    }
+
+    /// Pairs leftover icons with ships. Returns, per icon, the ship's unit index.
+    pub fn assign_ships(&self, icons: &[(V2, Option<u8>)], now: f64) -> Vec<Option<u32>> {
+        let mut pairs: Vec<(f64, usize, u32)> = Vec::new();
+        for (index, unit) in self.units.iter().enumerate() {
+            let Some(mi) = unit.mobile else { continue };
+            if unit.status == Status::Destroyed {
+                continue;
+            }
+            let motion = &self.motions[mi as usize];
+            let predicted = motion.at(now).0;
+            let since = if unit.seen_at.is_finite() { now - unit.seen_at } else { f64::INFINITY };
+            // Close to where it should be, or anywhere on its route while its
+            // position is still only a guess.
+            let gate = if motion.anchored { 1500.0 + 20.0 * since.min(600.0) } else { f64::INFINITY };
+            for (ii, (position, team)) in icons.iter().enumerate() {
+                if team.is_some_and(|t| t != unit.team) {
+                    continue;
+                }
+                let off_route = motion.path.project(*position).1;
+                if off_route > 900.0 {
+                    continue;
+                }
+                let d = position.dist(predicted);
+                if d <= gate {
+                    pairs.push((if motion.anchored { d } else { off_route + d * 0.05 }, ii, index as u32));
+                }
+            }
+        }
+        pairs.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+        let mut result = vec![None; icons.len()];
+        let mut taken = vec![false; self.units.len()];
+        for (_, ii, index) in pairs {
+            if result[ii].is_none() && !taken[index as usize] {
+                taken[index as usize] = true;
+                result[ii] = Some(index);
+            }
+        }
+        result
+    }
+
+    /// A ship was seen at `position`: fix its place on the route and learn its speed.
+    pub fn see_ship(&mut self, index: u32, position: V2, now: f64) -> bool {
+        if let Some(mi) = self.units[index as usize].mobile {
+            let motion = &mut self.motions[mi as usize];
+            let length = motion.path.length().max(1.0);
+            let (s_obs, _, _) = motion.path.project(position);
+            if let Some((s_prev, t_prev)) = motion.last_obs {
+                let dt = now - t_prev;
+                if dt >= 8.0 {
+                    let ds = (s_obs - s_prev).rem_euclid(length);
+                    let speed = ds / dt;
+                    if (0.5..35.0).contains(&speed) {
+                        motion.speed = motion.speed * 0.6 + speed * 0.4;
+                    }
+                    motion.last_obs = Some((s_obs, now));
+                }
+            } else {
+                motion.last_obs = Some((s_obs, now));
+            }
+            motion.s_ref = s_obs;
+            motion.t_ref = now;
+            motion.anchored = true;
+        }
+        self.units[index as usize].pos = position;
+        self.see(index, now)
+    }
+
+    /// Updates who holds each capturable site from this frame's occupiers:
+    /// `occupiers[site] = Some((team, icons))`, `owner_seen[site]` = owner's
+    /// units on the map there now. Returns sites that changed hands.
+    pub fn update_owners(&mut self, occupiers: &HashMap<u16, (u8, u32)>, now: f64) -> Vec<(u16, u8)> {
+        let mut changed = Vec::new();
+        for site in 0..self.owner.len() {
+            if !self.capturable[site] || self.owner_proof[site] == Proof::Manual {
+                continue;
+            }
+            let owner_visible = self.site_units[site].iter().any(|&i| {
+                let unit = &self.units[i as usize];
+                unit.team == self.owner[site] && unit.visible(now)
+            });
+            let size = self.site_units[site].len() as u32;
+            match occupiers.get(&(site as u16)) {
+                Some(&(team, count)) if team != self.owner[site] && !owner_visible && count >= size.min(2).max(1) => {
+                    let since = match self.occupied_since[site] {
+                        Some((t, at)) if t == team => at,
+                        _ => {
+                            self.occupied_since[site] = Some((team, now));
+                            now
+                        }
+                    };
+                    if now - since >= CAPTURE_HOLD_S {
+                        self.set_owner(site as u16, team, Proof::Confirmed, now);
+                        changed.push((site as u16, team));
+                    }
+                }
+                _ => self.occupied_since[site] = None,
+            }
+        }
+        changed
+    }
+
+    /// Hands a site to `team`. Its garrison is now that team's units.
+    pub fn set_owner(&mut self, site: u16, team: u8, proof: Proof, now: f64) {
+        let si = site as usize;
+        if si >= self.owner.len() {
+            return;
+        }
+        let flipped = self.owner[si] != team;
+        self.owner[si] = team;
+        self.owner_proof[si] = if team == self.original[si] && proof == Proof::Manual { Proof::None } else { proof };
+        self.occupied_since[si] = None;
+        if flipped {
+            for &index in &self.site_units[si] {
+                let unit = &mut self.units[index as usize];
+                unit.team = team;
+                unit.status = if proof == Proof::Manual { Status::Unknown } else { Status::Alive };
+                unit.proof = if proof == Proof::Manual { Proof::None } else { Proof::Confirmed };
+                unit.destroyed_at = None;
+                unit.lost_at = None;
+                if proof != Proof::Manual {
+                    unit.seen_at = now;
+                    unit.streak_from = now;
+                }
+            }
+        }
     }
 
     /// Records that a unit is on the map right now.
@@ -257,7 +521,11 @@ impl World {
             }
             let friendly = unit.team == self.my_team;
             // Friendly ground units are always sent, so a short absence is enough.
-            let patience = if friendly { 4.0 } else { wait };
+            let patience = match (friendly, unit.mobile.is_some()) {
+                (true, true) => 8.0,
+                (true, false) => 4.0,
+                _ => wait,
+            };
             if now - lost_at < patience {
                 continue;
             }
@@ -275,6 +543,30 @@ impl World {
             };
             self.destroy(index as u32, proof, now);
             changed.push(index as u32);
+        }
+
+        // Process of elimination: of several units of the type a kill-feed
+        // line named, all but one have been seen alive since. That one it is.
+        let mut eliminated = Vec::new();
+        for (pi, kill) in self.pending.iter().enumerate() {
+            if now - kill.at < self.detect_loss_s + 5.0 {
+                continue;
+            }
+            let candidates: Vec<u32> = (0..self.units.len() as u32)
+                .filter(|&i| {
+                    let unit = &self.units[i as usize];
+                    kill.ids.contains(&unit.id) && unit.status != Status::Destroyed
+                })
+                .collect();
+            let possible: Vec<u32> = candidates.iter().copied().filter(|&i| self.units[i as usize].seen_at < kill.at + 1.0).collect();
+            if candidates.len() >= 2 && possible.len() == 1 && !eliminated.iter().any(|(_, i)| *i == possible[0]) {
+                eliminated.push((pi, possible[0]));
+            }
+        }
+        for (pi, index) in eliminated.into_iter().rev() {
+            self.pending.remove(pi);
+            self.destroy(index, Proof::Likely, now);
+            changed.push(index);
         }
         changed
     }
@@ -302,9 +594,10 @@ impl World {
                 return Some(index);
             }
         }
-        // A unit with no neighbours can only be judged by timing.
+        // A unit with no neighbours (or a ship) can only be judged by timing.
         if let [(index, at)] = near[..] {
-            if self.neighbours[index as usize].is_empty() && (kill_at - at).abs() < 4.0 && now - at >= WITNESS_HOLD_S {
+            let lone = self.neighbours[index as usize].is_empty() || self.units[index as usize].mobile.is_some();
+            if lone && (kill_at - at).abs() < 4.0 && now - at >= WITNESS_HOLD_S {
                 return Some(index);
             }
         }

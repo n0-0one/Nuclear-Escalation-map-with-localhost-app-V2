@@ -202,6 +202,22 @@ pub struct Snapshot {
     pub log: Vec<LogEntry>,
     pub settings: Settings,
     pub diag: DiagView,
+    /// Sites that changed hands: [site, current owner, how we know].
+    pub owners: Vec<(u16, u8, Proof)>,
+    /// Ships where they are now (seen) or should be (estimated).
+    pub ships: Vec<ShipView>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ShipView {
+    pub site: u16,
+    pub p: V2,
+    pub dir: V2,
+    /// "observed" (on the map now), "predicted" (seen before, now estimated)
+    /// or "estimated" (never seen; placed from the battle clock or a guess).
+    pub state: &'static str,
+    pub unseen_s: Option<f64>,
+    pub destroyed: bool,
 }
 
 /// Raw facts about what the game reported, for troubleshooting.
@@ -377,6 +393,16 @@ impl Engine {
         self.seq += 1;
     }
 
+    /// Manual ownership: `team` takes the site, or None for its original owner.
+    pub fn capture(&mut self, site: u16, team: Option<u8>) {
+        let now = self.now;
+        if let Some(world) = &mut self.world {
+            let team = team.unwrap_or_else(|| world.original.get(site as usize).copied().unwrap_or(0));
+            world.set_owner(site, team, Proof::Manual, now);
+            self.seq += 1;
+        }
+    }
+
     pub fn mark(&mut self, site: u16, slot: Option<u16>, destroyed: Option<bool>) {
         let now = self.now;
         if let Some(world) = &mut self.world {
@@ -517,7 +543,7 @@ impl Engine {
             match world.kill_feed(&ids, now, &self.pack.core.units) {
                 KillOutcome::Located(site, name) => {
                     let s = &self.pack.levels[world.level].variants[world.variant].sites[site as usize];
-                    let side = if s.team == my_team { "friendly" } else { "enemy" };
+                    let side = if world.owner[site as usize] == my_team { "friendly" } else { "enemy" };
                     let text = format!("{name} destroyed at {side} {}.", site_label(s).to_lowercase());
                     self.push_log("kill", text, Some(site));
                 }
@@ -599,29 +625,80 @@ impl Engine {
                 self.ident.see_airfields(airfields);
                 self.reidentify();
                 let my_team = self.world.as_ref().map(|w| w.my_team);
-                for (p, aff, icon, blink) in ground {
-                    let team = match (aff, my_team) {
-                        (Aff::Ally | Aff::Player, Some(t)) => Some(t),
-                        (Aff::Enemy, Some(t)) => Some(3 - t),
-                        _ => None,
-                    };
+                let battle_t = self.battle_t();
+                if let Some(world) = &mut self.world {
+                    world.place_ships(battle_t, now);
+                }
+                let icons: Vec<(V2, Option<u8>)> = ground
+                    .iter()
+                    .map(|(p, aff, _, _)| {
+                        let team = match (aff, my_team) {
+                            (Aff::Ally | Aff::Player, Some(t)) => Some(t),
+                            (Aff::Enemy, Some(t)) => Some(3 - t),
+                            _ => None,
+                        };
+                        (*p, team)
+                    })
+                    .collect();
+                // Fixed units first, then ships, and what is left is moving traffic.
+                let fixed = self.world.as_ref().map_or_else(|| vec![None; icons.len()], |w| w.assign(&icons));
+                let leftover: Vec<usize> = (0..icons.len()).filter(|&i| fixed[i].is_none()).collect();
+                let leftover_icons: Vec<(V2, Option<u8>)> = leftover.iter().map(|&i| icons[i]).collect();
+                let ships = self.world.as_ref().map_or_else(|| vec![None; leftover.len()], |w| w.assign_ships(&leftover_icons, now));
+                let mut ship_of = vec![None; icons.len()];
+                for (k, &i) in leftover.iter().enumerate() {
+                    ship_of[i] = ships[k];
+                }
+                if let Some(world) = &mut self.world {
+                    let pairs: Vec<(V2, u32)> = fixed.iter().enumerate().filter_map(|(i, m)| m.filter(|(_, foreign)| !foreign).map(|(u, _)| (icons[i].0, u))).collect();
+                    world.learn_offset(&pairs);
+                }
+                let mut occupiers: HashMap<u16, (u8, u32)> = HashMap::new();
+                let mut back: Vec<u16> = Vec::new();
+                for (i, (p, aff, icon, blink)) in ground.into_iter().enumerate() {
                     if aff == Aff::Player {
                         self.player = Some((p, V2(0.0, 0.0)));
                     }
-                    let matched = self.world.as_ref().and_then(|w| w.match_icon(p, team));
-                    match (matched, &mut self.world) {
-                        (Some(index), Some(world)) => {
+                    let team = icons[i].1;
+                    match (fixed[i], ship_of[i], &mut self.world) {
+                        (Some((index, false)), _, Some(world)) => {
                             if world.see(index, now) {
-                                let site = world.units[index as usize].site;
-                                let s = &self.pack.levels[world.level].variants[world.variant].sites[site as usize];
-                                let text = format!("A unit is back at {}.", site_label(s).to_lowercase());
-                                self.push_log("info", text, Some(site));
+                                back.push(world.units[index as usize].site);
+                            }
+                        }
+                        (Some((index, true)), _, Some(world)) => {
+                            // the other team's vehicle standing on a site's own positions
+                            let site = world.units[index as usize].site;
+                            let entry = occupiers.entry(site).or_insert((team.unwrap_or(0), 0));
+                            if entry.0 == team.unwrap_or(0) {
+                                entry.1 += 1;
+                            }
+                        }
+                        (None, Some(index), Some(world)) => {
+                            if world.see_ship(index, p, now) {
+                                back.push(world.units[index as usize].site);
                             }
                         }
                         _ => {
                             contacts.push(Contact { pos: p, team: team.unwrap_or(0) });
                             self.others.push(Other { p, dir: V2(0.0, 0.0), aff, kind: "ground", icon: icon.to_string(), blink });
                         }
+                    }
+                }
+                if let Some(world) = &mut self.world {
+                    let my = world.my_team;
+                    let captures = world.update_owners(&occupiers, now);
+                    let variant = &self.pack.levels[world.level].variants[world.variant];
+                    let mut lines: Vec<(String, u16)> = back
+                        .iter()
+                        .map(|&site| (format!("A unit is back at {}.", site_label(&variant.sites[site as usize]).to_lowercase()), site))
+                        .collect();
+                    for (site, team) in captures {
+                        let who = if team == my { "Your side" } else { "The enemy" };
+                        lines.push((format!("{who} captured {}.", site_label(&variant.sites[site as usize]).to_lowercase()), site));
+                    }
+                    for (text, site) in lines {
+                        self.push_log(if text.contains("captured") { "capture" } else { "info" }, text, Some(site));
                     }
                 }
             }
@@ -739,12 +816,33 @@ impl Engine {
                 feed_kills: self.feed_kills,
                 feed_samples: self.feed_samples.iter().cloned().collect(),
             },
+            owners: Vec::new(),
+            ships: Vec::new(),
         };
         let Some(world) = &self.world else { return snapshot };
         let variant = &self.pack.levels[world.level].variants[world.variant];
         let enemy_team = 3 - world.my_team;
         let radius = self.settings.strike_radius_m;
 
+        for (si, &team) in world.owner.iter().enumerate() {
+            if team != world.original[si] || world.owner_proof[si] == Proof::Manual {
+                snapshot.owners.push((si as u16, team, world.owner_proof[si]));
+            }
+        }
+        for unit in &world.units {
+            let Some(mi) = unit.mobile else { continue };
+            let motion = &world.motions[mi as usize];
+            let destroyed = unit.status == Status::Destroyed;
+            let (p, dir) = if destroyed || unit.visible(now) { (unit.pos, motion.at(now).1) } else { motion.at(now) };
+            snapshot.ships.push(ShipView {
+                site: unit.site,
+                p: p.round(),
+                dir,
+                state: if unit.visible(now) { "observed" } else if motion.anchored { "predicted" } else { "estimated" },
+                unseen_s: (motion.anchored && !unit.visible(now)).then(|| (now - unit.seen_at).round()),
+                destroyed,
+            });
+        }
         for unit in &world.units {
             if unit.status == Status::Unknown {
                 continue;
@@ -814,7 +912,7 @@ impl Engine {
             .sites
             .iter()
             .enumerate()
-            .filter(|(_, s)| s.team == enemy_team && s.moves.is_none())
+            .filter(|(si, s)| world.owner[*si] == enemy_team && s.moves.is_none())
             .map(|(si, s)| (s.p, Some(si)))
             .collect();
         candidates.extend(enemy_convoys.iter().map(|c| (c.pos, None)));
@@ -861,7 +959,7 @@ impl Engine {
                 if !(inside || soon) {
                     continue;
                 }
-                let stack = site.team == enemy_team;
+                let stack = world.owner[si] == enemy_team;
                 let count = convoy.n + if stack { site_alive[si].0 } else { 0 };
                 snapshot.alerts.push(AlertView {
                     id: format!("{}-{}", convoy.id, si),
@@ -883,7 +981,7 @@ impl Engine {
         // ---- nearest live air defences
         if let Some((p, dir)) = self.player {
             for (si, site) in variant.sites.iter().enumerate() {
-                if site.team != enemy_team || !site.is_air_defence() || site_alive[si].0 == 0 {
+                if world.owner[si] != enemy_team || !(site.is_air_defence() || site.cat == "ship") || site_alive[si].0 == 0 {
                     continue;
                 }
                 let reach = world.site_units[si]
@@ -893,12 +991,14 @@ impl Engine {
                     .filter_map(|u| self.pack.core.units.get(&u.id))
                     .map(|spec| spec.reach())
                     .fold(0.0, f64::max);
-                let offset = site.p.sub(p);
+                // a ship's live position, or the site's own
+                let here = world.site_units[si].first().map(|&i| &world.units[i as usize]).filter(|u| u.mobile.is_some()).map_or(site.p, |u| u.pos);
+                let offset = here.sub(p);
                 let bearing = offset.bearing();
                 let relative = if dir.len() > 0.1 { Some(((bearing - dir.bearing() + 540.0) % 360.0 - 180.0).round()) } else { None };
                 snapshot.cues.push(CueView {
                     site: si,
-                    p: site.p,
+                    p: here,
                     dist_m: offset.len().round(),
                     bearing: bearing.round(),
                     relative,

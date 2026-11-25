@@ -219,3 +219,125 @@ fn reports_the_players_own_marks() {
     assert!(snapshot.diag.seen.iter().any(|(name, _)| name.starts_with("point_of_interest")));
     assert!(snapshot.diag.detection.fixed_friendly > 50);
 }
+
+/// Ships sail their routes; the app follows them while seen and estimates
+/// where they are while not.
+#[test]
+fn ships_sail_and_are_followed() {
+    let pack = pack();
+    let mut sim = Sim::new(pack.clone(), 0, 0, 4, 1, 31);
+    // Fly over the enemy fleet and away again, so its ships come and go from the map.
+    let fleet: Vec<_> = sim.units.iter().filter(|u| u.route.is_some() && u.team == 2).map(|u| u.pos).collect();
+    let home = sim.player().0;
+    sim.set_player_route(vec![home, fleet[0], fleet[fleet.len() / 2], fleet[fleet.len() - 1]]);
+    let mut engine = Engine::new(pack.clone());
+    let (mut seen_err, mut guess_err) = (Vec::new(), Vec::new());
+    let mut tick = 0;
+    run(&mut sim, &mut engine, 1500.0, |sim, engine| {
+        tick += 1;
+        if tick % 20 != 0 {
+            return;
+        }
+        let snapshot = engine.snapshot();
+        for ship in &snapshot.ships {
+            let Some(real) = sim.units.iter().find(|u| u.site == ship.site && u.route.is_some()) else { continue };
+            if !real.alive || ship.destroyed {
+                continue;
+            }
+            let error = real.pos.dist(ship.p);
+            match ship.state {
+                "observed" => seen_err.push(error),
+                "predicted" => guess_err.push(error),
+                _ => {}
+            }
+        }
+    });
+    let median = |v: &mut Vec<f64>| {
+        v.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        v.get(v.len() / 2).copied().unwrap_or(f64::NAN)
+    };
+    let (seen, guess) = (median(&mut seen_err), median(&mut guess_err));
+    println!("ships: on the map median error {seen:.0} m ({} samples), estimated {guess:.0} m ({} samples)", seen_err.len(), guess_err.len());
+    assert!(seen_err.len() > 50 && seen < 50.0, "seen ships are where the game shows them");
+    assert!(guess_err.len() > 20 && guess < 2500.0, "estimated ships stay near their real position");
+}
+
+#[test]
+fn sunk_ships_are_marked_destroyed() {
+    let pack = pack();
+    let mut sim = Sim::new(pack.clone(), 0, 0, 4, 1, 32);
+    sim.kill_every = (1e9, 1e9); // only the kills made here
+    let fleet: Vec<_> = sim.units.iter().filter(|u| u.route.is_some() && u.team == 2).map(|u| u.pos).collect();
+    sim.set_player_route(vec![fleet[0], fleet[fleet.len() - 1]]);
+    let mut engine = Engine::new(pack.clone());
+    run(&mut sim, &mut engine, 30.0, |_, _| {});
+    // one enemy ship that is on the map, and one friendly ship
+    let mut sunk = Vec::new();
+    for team in [2u8, 1] {
+        let snapshot = engine.snapshot();
+        let index = (0..sim.units.len())
+            .find(|&i| {
+                let u = &sim.units[i];
+                u.route.is_some() && u.team == team && snapshot.ships.iter().any(|s| s.site == u.site && s.state == "observed")
+            })
+            .expect("a ship on the map");
+        sim.destroy_unit(index);
+        sunk.push((sim.units[index].site, sim.units[index].slot));
+        run(&mut sim, &mut engine, 15.0, |_, _| {});
+    }
+    run(&mut sim, &mut engine, 20.0, |_, _| {});
+    let world = engine.world().unwrap();
+    for (site, slot) in sunk {
+        let unit = world.units.iter().find(|u| u.site == site && u.slot == slot).unwrap();
+        assert_eq!(unit.status, Status::Destroyed, "ship at site {site} is shown as destroyed");
+    }
+    assert!(engine.snapshot().ships.iter().any(|s| s.destroyed));
+}
+
+#[test]
+fn captured_sites_change_hands() {
+    let pack = pack();
+    let mut sim = Sim::new(pack.clone(), 0, 0, 3, 1, 33);
+    sim.kill_every = (1e9, 1e9);
+    let mut engine = Engine::new(pack.clone());
+    run(&mut sim, &mut engine, 30.0, |_, _| {});
+    let variant = &pack.levels[0].variants[0];
+    // an enemy strongpoint taken by the player's team: its new garrison is friendly and always on the map
+    let site = variant.sites.iter().position(|s| s.team == 2 && s.cat == "strongpoint").unwrap();
+    for index in 0..sim.units.len() {
+        if sim.units[index].site as usize == site {
+            sim.destroy_unit(index);
+        }
+    }
+    run(&mut sim, &mut engine, 20.0, |_, _| {});
+    sim.capture_site(site, 1);
+    run(&mut sim, &mut engine, 20.0, |_, _| {});
+    let snapshot = engine.snapshot();
+    assert!(snapshot.owners.iter().any(|&(s, team, _)| s as usize == site && team == 1), "owners: {:?}", snapshot.owners);
+    assert!(snapshot.log.iter().any(|l| l.text.contains("captured")));
+    // and it can be set back by hand
+    engine.capture(site as u16, None);
+    assert!(engine.world().unwrap().owner[site] == 2);
+}
+
+/// Real icons can sit tens of metres away from the mission positions.
+#[test]
+fn tracks_destroyed_units_with_offset_positions() {
+    let pack = pack();
+    let mut sim = Sim::new(pack.clone(), 1, 0, 2, 2, 44);
+    sim.position_error_m = 50.0;
+    let mut engine = Engine::new(pack.clone());
+    run(&mut sim, &mut engine, 900.0, |_, _| {});
+    let world = engine.world().expect("battle identified");
+    let truth = |site: u16, slot: u16| sim.units.iter().find(|u| u.site == site && u.slot == slot).unwrap();
+    let enemy_dead = sim.units.iter().filter(|u| !u.alive && u.team == 1 && u.route.is_none()).count();
+    let found = world.units.iter().filter(|u| u.status == Status::Destroyed && u.team == 1 && !truth(u.site, u.slot).alive).count();
+    let wrong = world.units.iter().filter(|u| u.status == Status::Destroyed && truth(u.site, u.slot).alive).count();
+    println!("offset 50 m: enemy dead {enemy_dead}, found {found}, wrong {wrong}");
+    // Without an offset the same battle places about half of the kills (the
+    // rest hit units nobody on the team could see); the offset must not cost more.
+    assert!(found * 10 >= enemy_dead * 5, "kills are placed as well as without an offset");
+    assert!(world.offset.dist(ntl_engine::geo::V2(43.5, 25.0)) < 10.0, "the map-wide offset is learned: {:?}", world.offset);
+    assert!(wrong * 10 <= found.max(10), "few wrong calls");
+}
+

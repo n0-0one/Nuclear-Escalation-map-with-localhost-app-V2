@@ -41,6 +41,8 @@ pub struct SimUnit {
     restore_s: Option<f64>,
     detected_until: f64,
     radar: bool,
+    /// Ships: patrol route, distance along it and speed (m/s).
+    pub route: Option<(Path, f64, f64)>,
 }
 
 pub struct SimConvoy {
@@ -51,6 +53,7 @@ pub struct SimConvoy {
     pub n: u32,
     pub supply: bool,
     pub from_site: usize,
+    pub to_site: usize,
     vehicle: String,
     detected_until: f64,
 }
@@ -111,9 +114,11 @@ pub struct Sim {
     pub kill_every: (f64, f64),
     /// Paint airfields in a neutral colour instead of the team colours.
     pub neutral_airfields: bool,
-    /// Shift every ground unit by a fixed offset of up to this many metres,
-    /// as if the mission data were slightly off.
+    /// Shift every ground unit's icon by this many metres in one direction
+    /// (plus a little scatter), as if the map were slightly off.
     pub position_error_m: f64,
+    /// Multiplies every sensor range (lower = fewer enemies on the map).
+    pub sensor_scale: f64,
     /// Add point-of-interest and aiming-point marks to the map.
     pub player_marks: bool,
 }
@@ -125,13 +130,23 @@ impl Sim {
         let var = &lvl.variants[variant];
         let mut units = Vec::new();
         for (si, site) in var.sites.iter().enumerate() {
-            if site.moves.is_some() {
+            let ship_route = site.route.as_ref().filter(|r| site.cat == "ship" && r.pts.len() >= 4);
+            if site.moves.is_some() && ship_route.is_none() {
                 continue;
             }
             for (ui, placement) in site.units.iter().enumerate() {
                 if placement.e >> era & 1 == 0 {
                     continue;
                 }
+                let route = ship_route.map(|r| {
+                    let mut points: Vec<V2> = r.pts.chunks_exact(2).map(|c| V2(c[0], c[1])).collect();
+                    if r.closed {
+                        points.push(points[0]);
+                    }
+                    // ships sail a bit below their top speed
+                    let kph = pack.core.units.get(&placement.u).and_then(|u| u.kph).unwrap_or(40.0);
+                    (Path::new(points), 0.0, kph / 3.6 * 0.9)
+                });
                 let restore_s = match placement.l.as_deref() {
                     Some("restore") => Some(pack.core.template_restore.restore_seconds),
                     Some("repair_with_site") => Some(pack.core.template_restore.depot_repair_seconds),
@@ -148,6 +163,7 @@ impl Sim {
                     restore_s: restore_s.filter(|s| *s > 0.0),
                     detected_until: f64::NEG_INFINITY,
                     radar: site.cat == "ew_radar",
+                    route,
                 });
             }
         }
@@ -236,6 +252,7 @@ impl Sim {
             kill_every: (14.0, 34.0),
             neutral_airfields: false,
             position_error_m: 0.0,
+            sensor_scale: 1.0,
             player_marks: true,
             rng,
             pack,
@@ -291,6 +308,7 @@ impl Sim {
                         n: rules.column_vehicle_count.max(3),
                         supply: true,
                         from_site: self.depots[di].site,
+                        to_site: to,
                         vehicle: self.depots[di].supply_vehicle.clone(),
                         detected_until: f64::NEG_INFINITY,
                     });
@@ -309,6 +327,7 @@ impl Sim {
                     n: 5,
                     supply: false,
                     from_site: self.depots[di].site,
+                    to_site: to,
                     vehicle: self.depots[di].supply_vehicle.clone(),
                     detected_until: f64::NEG_INFINITY,
                 });
@@ -317,12 +336,32 @@ impl Sim {
         for convoy in &mut self.convoys {
             convoy.s += convoy.speed * dt;
         }
+        for unit in &mut self.units {
+            if let Some((path, s, speed)) = &mut unit.route {
+                *s = (*s + *speed * dt).rem_euclid(path.length().max(1.0));
+                unit.pos = path.at(*s).0;
+            }
+        }
+        // An armoured column reaching a site whose defenders are all gone takes it.
+        let arrived: Vec<(usize, u8)> = self
+            .convoys
+            .iter()
+            .filter(|c| !c.supply && c.n > 0 && c.s >= c.path.length())
+            .map(|c| (c.to_site, c.team))
+            .collect();
+        for (site, team) in arrived {
+            let defenders: Vec<&SimUnit> = self.units.iter().filter(|u| u.site as usize == site).collect();
+            if !defenders.is_empty() && defenders.iter().all(|u| !u.alive && u.team != team) {
+                self.capture_site(site, team);
+            }
+        }
         self.convoys.retain(|c| c.s < c.path.length() && c.n > 0);
 
         // detection
         let sensors = self.sensors();
         let now = self.t;
-        let seen_by = |p: V2, team: u8| sensors.iter().any(|(sp, range, st)| *st != team && sp.dist(p) <= *range);
+        let scale = self.sensor_scale;
+        let seen_by = |p: V2, team: u8| sensors.iter().any(|(sp, range, st)| *st != team && sp.dist(p) <= *range * scale);
         for unit in &mut self.units {
             if unit.alive && seen_by(unit.pos, unit.team) {
                 unit.detected_until = now + DETECT_LINGER_S;
@@ -376,6 +415,38 @@ impl Sim {
         }
     }
 
+    /// Makes the player fly a loop through these points instead.
+    pub fn set_player_route(&mut self, mut points: Vec<V2>) {
+        if points.len() >= 2 {
+            points.push(points[0]);
+            self.player_path = Path::new(points);
+            self.player_s = 0.0;
+        }
+    }
+
+    /// Destroys one unit and writes the kill-feed line, as the game does.
+    pub fn destroy_unit(&mut self, index: usize) {
+        let now = self.t;
+        let unit = &mut self.units[index];
+        unit.alive = false;
+        unit.died_at = now;
+        unit.detected_until = f64::NEG_INFINITY;
+        let name = self.unit_name(&self.units[index].id.clone());
+        let tag = self.rng.pick(90);
+        self.say(format!("Hunter_{tag} (F-16C) destroyed {name}"));
+    }
+
+    /// A site changes hands: its positions are now held by `team`'s vehicles.
+    pub fn capture_site(&mut self, site: usize, team: u8) {
+        let now = self.t;
+        for unit in self.units.iter_mut().filter(|u| u.site as usize == site) {
+            unit.team = team;
+            unit.alive = true;
+            unit.died_at = now;
+            unit.detected_until = f64::NEG_INFINITY;
+        }
+    }
+
     /// Answers one page of the game's local web interface.
     pub fn page(&self, path: &str) -> Option<String> {
         let (route, query) = path.split_once('?').unwrap_or((path, ""));
@@ -412,10 +483,12 @@ impl Sim {
                     if !unit.alive || (unit.team != self.my_team && unit.detected_until <= self.t) {
                         continue;
                     }
-                    // a repeatable per-unit offset
+                    // a repeatable per-unit offset (ships are where they are)
                     let wobble = (unit.site as f64 * 12.9898 + unit.slot as f64 * 78.233).sin() * 43758.5453;
                     let angle = (wobble - wobble.floor()) * std::f64::consts::TAU;
-                    let shifted = unit.pos.add(V2(angle.cos(), angle.sin()).scale(self.position_error_m));
+                    let error = if unit.route.is_some() { 0.0 } else { self.position_error_m };
+                    let shift = V2(0.87, 0.5).scale(error).add(V2(angle.cos(), angle.sin()).scale(error * 0.15));
+                    let shifted = unit.pos.add(shift);
                     let (x, y) = frame.to_norm(shifted);
                     let icon = self.pack.core.units.get(&unit.id).map_or("Tank", |u| u.icon.as_str());
                     objects.push(json!({"type":"ground_model","color":colour(unit.team),"color[]":rgb(unit.team),"blink":0,"icon":icon,"icon_bg":"none","x":x,"y":y}));
