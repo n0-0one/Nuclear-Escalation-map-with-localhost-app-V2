@@ -1,9 +1,9 @@
 {
  "schema": 1,
- "game_version": "2.61.0.39",
+ "game_version": "2.61.0.42",
  "datamine": {
   "repository": "gszabi99/War-Thunder-Datamine",
-  "commit": "fbfc3fd4929bac8d7ce7c4c467c44ddf0e509a0e"
+  "commit": "4268c8d0acfeeb8ba175176fabce053ceb74702f"
  },
  "terrain_source": {
   "repository": "majorlier/nuclear-thunder-interactive-map",
@@ -23,7 +23,7 @@
  ],
  "files": {
   "core.json": {
-   "sha256": "81e0e9abacd0a07d395002611e224f24c2524ff8f3f3e27a72987a9149b9a8f1",
+   "sha256": "0f914d622c424aa419561fd068068a20d7e7485f99c9476401eedc55e6699e0a",
    "bytes": 250136
   },
   "icons.json": {
@@ -705,5 +705,5 @@
    "sha": "40ca7c509c04fc39eb6bd3a82b7b6b7cebcd70e6"
   }
  ],
- "generated": "2026-11-24T15:16:50Z"
+ "generated": "2026-11-25T14:55:44Z"
 }
