@@ -1,30 +1,19 @@
 {
  "schema": 1,
- "game_version": "2.61.0.42",
+ "game_version": "2.61.0.44",
  "datamine": {
   "repository": "gszabi99/War-Thunder-Datamine",
-  "commit": "4268c8d0acfeeb8ba175176fabce053ceb74702f"
+  "commit": "3f84b451d8d4d9e2f6dded7c0797a681b8764a62"
  },
  "terrain_source": {
   "repository": "majorlier/nuclear-thunder-interactive-map",
-  "commit": "aebbf9125457212a69d0ee79df72fe339214b8bf"
+  "commit": "fd8e4babddef6e0908e73b0cdb88e6e5236b80ee"
  },
- "pending_game_changes": [
-  "aces.vromfs.bin_u/templates/nuclear_escalation/factory_air_defence_presets.blkx",
-  "aces.vromfs.bin_u/templates/nuclear_escalation/factory_equip.blkx",
-  "aces.vromfs.bin_u/templates/nuclear_escalation/factory_tank.blkx",
-  "aces.vromfs.bin_u/templates/nuclear_escalation/strongpoints.blkx",
-  "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_archipelago_mirror_nuclear_escalation_tdm.blkx",
-  "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_archipelago_nuclear_escalation_tdm.blkx",
-  "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_kamchatka_mirror_nuclear_escalation_tdm.blkx",
-  "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_kamchatka_nuclear_escalation_tdm.blkx",
-  "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_south_eastern_city_mirror_nuclear_escalation_tdm.blkx",
-  "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_south_eastern_city_nuclear_escalation_tdm.blkx"
- ],
+ "pending_game_changes": [],
  "files": {
   "core.json": {
-   "sha256": "0f914d622c424aa419561fd068068a20d7e7485f99c9476401eedc55e6699e0a",
-   "bytes": 250136
+   "sha256": "f3d8a5a37cb85387858e473a87eebb1f8f02edd9a012cfd988d9dc829f74141f",
+   "bytes": 250250
   },
   "icons.json": {
    "sha256": "ff3279c105714efc182c469d642c21b47ea90f2060ed1d8730aa3e66ebde2871",
@@ -194,9 +183,17 @@
    "sha256": "fd09c479b7608c5f26a5e43fb05c026d0c424aafa85aeed583cf32f9300e5723",
    "bytes": 9106
   },
+  "units/flakpz_i_gepard.webp": {
+   "sha256": "ad1aff18e55ff34dc777c1070e999199a61847b98bb44773dd3a8db9485019d3",
+   "bytes": 1646
+  },
   "units/flarakpz_1.webp": {
    "sha256": "127becf32e9c8350d9f881e589b3eb5e87bbfc4a4ff1edee8ce8c9347abb7e27",
    "bytes": 8314
+  },
+  "units/flarakrad.webp": {
+   "sha256": "2875c80cc69ccadc5492149032e166bf777c84e853660da30e28b7b0e44b67f5",
+   "bytes": 1748
   },
   "units/germ_flakpz_i_gepard.webp": {
    "sha256": "ad1aff18e55ff34dc777c1070e999199a61847b98bb44773dd3a8db9485019d3",
@@ -705,5 +702,5 @@
    "sha": "40ca7c509c04fc39eb6bd3a82b7b6b7cebcd70e6"
   }
  ],
- "generated": "2026-11-25T14:55:44Z"
+ "generated": "2026-11-26T14:26:35Z"
 }
