@@ -1,0 +1,706 @@
+{
+ "schema": 1,
+ "game_version": "2.61.0.51",
+ "datamine": {
+  "repository": "gszabi99/War-Thunder-Datamine",
+  "commit": "ec34510b0e7494101adaef1f71bf30cc5e0bebb1"
+ },
+ "terrain_source": {
+  "repository": "majorlier/nuclear-thunder-interactive-map",
+  "commit": "fd8e4babddef6e0908e73b0cdb88e6e5236b80ee"
+ },
+ "pending_game_changes": [],
+ "files": {
+  "core.json": {
+   "sha256": "0c60af576651e4373c5b23a82d30ba2622b8e5572d2cdef975ceebfcc57cda93",
+   "bytes": 250250
+  },
+  "icons.json": {
+   "sha256": "ff3279c105714efc182c469d642c21b47ea90f2060ed1d8730aa3e66ebde2871",
+   "bytes": 78975
+  },
+  "levels/archipelago.height.json": {
+   "sha256": "8813cd314c66acf705c98bdf2c78497a37d2439c5cf9a7588ea7fa7a4fb71449",
+   "bytes": 59
+  },
+  "levels/archipelago.height.webp": {
+   "sha256": "f0c7d7dcdfaf2bc45bf201a19e8ff3e774c3a74930ee0d8469e4b32c0e4e2e55",
+   "bytes": 2804658
+  },
+  "levels/archipelago.json": {
+   "sha256": "9a70122989fd9739658ad94273f42029b32c9b54ef50a0e65c0bc0eb3092f658",
+   "bytes": 278952
+  },
+  "levels/archipelago.roads.json": {
+   "sha256": "a0ffd99b508e70a991ab28425245a87fd84229b6bd401862c5f44d6e9546c1fa",
+   "bytes": 354112
+  },
+  "levels/archipelago.webp": {
+   "sha256": "07682181c961f348fc9ca86afb2793d4193e98c32ba46294f67f94fd593b320b",
+   "bytes": 1566546
+  },
+  "levels/kamchatka.height.json": {
+   "sha256": "b66753c6bd57d28fd9b371a74abdcb5a751d8ada2d18a3c8200ce0482661d8d4",
+   "bytes": 60
+  },
+  "levels/kamchatka.height.webp": {
+   "sha256": "a2820024d16b2dda353b88d42e7006f6d8b2ad16be288cd33276e814223f5ee4",
+   "bytes": 3237768
+  },
+  "levels/kamchatka.json": {
+   "sha256": "b6a8e682b06c994f758c0581dc5a315df50d3808161132c6ef874adb3530b218",
+   "bytes": 263839
+  },
+  "levels/kamchatka.roads.json": {
+   "sha256": "b5bf542eb676fa3653b1e6d1361c23967eb84322eecb4dd79a3e2ddef8133c31",
+   "bytes": 264097
+  },
+  "levels/kamchatka.webp": {
+   "sha256": "4e7b4add9b7219a5702b45eda6c2ff8d38ffb1e922fd7d69ffc78c81fd9bfdd2",
+   "bytes": 1557450
+  },
+  "levels/south_eastern_city.height.json": {
+   "sha256": "70751f5da5dfd62c57c30f0a6179d5dc6bdb07509d74d427ed2b4a08a93d3efa",
+   "bytes": 59
+  },
+  "levels/south_eastern_city.height.webp": {
+   "sha256": "4906397ea7ed5c8069b45688faec816f716f0e998f7f664d389f58e7899c57a9",
+   "bytes": 1144582
+  },
+  "levels/south_eastern_city.json": {
+   "sha256": "3363b69232f562e9dc09852148978292fac7a788840cf31591a13617c98f16ed",
+   "bytes": 252247
+  },
+  "levels/south_eastern_city.roads.json": {
+   "sha256": "1fec90b7bd08ae2831dee7674e467242bf02962a56a6f0695b17edba1f0dab90",
+   "bytes": 157249
+  },
+  "levels/south_eastern_city.webp": {
+   "sha256": "2949a71e80ced291bb5e8064e77aa7834fa8c9dd5abff4ee6272fadfbab05139",
+   "bytes": 356562
+  },
+  "units/2s19m1.webp": {
+   "sha256": "1456826ec396fd2f1dee528212e89c13d4d1f8383560c7380f140da4639563c2",
+   "bytes": 10744
+  },
+  "units/2s38.webp": {
+   "sha256": "6dac2b23792602ded2b703706c5858b5725a37d2afcd1d4f25d88df054ee8fec",
+   "bytes": 10678
+  },
+  "units/2s3m.webp": {
+   "sha256": "3419ba12113baa09dbe653c85bd5e59cc47bca4f8d70b53c9f6e041a3fed2a7d",
+   "bytes": 11190
+  },
+  "units/2s6.webp": {
+   "sha256": "c8687ee97358e3ec4e09ce7715995beffae98beae2beae533ea1d2a07a2a89aa",
+   "bytes": 8434
+  },
+  "units/9a317m.webp": {
+   "sha256": "5e48c9a9d20b50dd4e31a67ad624fbf68b78d579df72c6a070650a07887eb652",
+   "bytes": 8886
+  },
+  "units/9a33bm3.webp": {
+   "sha256": "1879973cf7abe6f7c0a116aab52ed26942296919e2c3960febd66d997d3d3489",
+   "bytes": 11820
+  },
+  "units/9a35m2.webp": {
+   "sha256": "271131f0c352b04bbf4c966b61421c1454747d0e5d20bdab113afe7c773c3e12",
+   "bytes": 10178
+  },
+  "units/9k79_tochka.webp": {
+   "sha256": "40c35dc24b932c0bcf43895ec2d3d5563ef08eae48937c0f6a513a392d874780",
+   "bytes": 6492
+  },
+  "units/9s18_m3.webp": {
+   "sha256": "21f4a7481815648efccbcab9093f702cbdd7dcdba5116875d7f80f3d53a7bd41",
+   "bytes": 8864
+  },
+  "units/_carrier.webp": {
+   "sha256": "8adcf40cd0d4760fee09b015fb34acd083a9bb0428131dba14b6a56fd896cf3a",
+   "bytes": 1528
+  },
+  "units/_launcher.webp": {
+   "sha256": "71e89f9b093a6ae5e4719541e0361fd9916cf7a441da32d446d1e56235b6859d",
+   "bytes": 3564
+  },
+  "units/_ship.webp": {
+   "sha256": "a200cae5bfac2ab851e5a633437aae11f14834d45b1271059e9b8358ae702daa",
+   "bytes": 1582
+  },
+  "units/_truck.webp": {
+   "sha256": "0be5cf07b6baef18746f10c66a40565ca306bf1f494e9e77fe18c57250d54ec7",
+   "bytes": 2106
+  },
+  "units/aircraftcarrier_admiral_kuznetsov.webp": {
+   "sha256": "51366993100f59e44fa96df40b0d26b7acd70e4a7de334c82f066afb50292bb6",
+   "bytes": 7822
+  },
+  "units/aircraftcarrier_baku.webp": {
+   "sha256": "ac4be6c59e5dd5b8f049d9b71ed8d1f5223e143dbf20e9d2698552e74a472d35",
+   "bytes": 8124
+  },
+  "units/aircraftcarrier_forrestal.webp": {
+   "sha256": "29f261a7c582f748560707539f867ee0a2eb784932ea9d67690c55a0dc044c28",
+   "bytes": 7460
+  },
+  "units/ashville_class_douglas.webp": {
+   "sha256": "340b2c3db16963aa9f3f1cb0e5f526d2df7cf5bc2c4c82549bd3421fffdf9212",
+   "bytes": 14598
+  },
+  "units/bmp_1.webp": {
+   "sha256": "ccdbf2af1ed1c262cb4f599a8cfa897158dcc92c425cdc98c853f07e4c06b7a8",
+   "bytes": 10220
+  },
+  "units/bmp_2.webp": {
+   "sha256": "a3d40e91c662fe65e4dfb5b3296100a55a0a85ade9f7fb6bc9b631a49b68c830",
+   "bytes": 11198
+  },
+  "units/bmp_3.webp": {
+   "sha256": "0d5c9c9a9a0d1285c8633b6e39871d3236672ad99144babab855f59c6e44cb0a",
+   "bytes": 11194
+  },
+  "units/crotale_ng.webp": {
+   "sha256": "3dcc8eb68eba6bcfe2a7f693f07c54a2333d372c14640897161c780690e7ba4b",
+   "bytes": 9604
+  },
+  "units/cruiser_rckt_california.webp": {
+   "sha256": "ae2b41a657e3daa2fcba0b8a24b7269a2b52b4e67e57c9ecb0406b1230b85a4d",
+   "bytes": 9650
+  },
+  "units/destroyer_cf_adams_class_cf_adams.webp": {
+   "sha256": "1368192e5d6dcb925f432a251edefa25472a4b1fda49846db780e0644199c921",
+   "bytes": 16056
+  },
+  "units/destroyer_pr56_bravy.webp": {
+   "sha256": "f5294c09296fb3f9d7f5ba0d5ac15490d9a4d6d6b07593c45d5b6e3d06d6154d",
+   "bytes": 14996
+  },
+  "units/destroyer_rckt_pr956.webp": {
+   "sha256": "22ea709f80b09cff3041b0f9a588f9a72f3de806e083575993d5ba369054362b",
+   "bytes": 9530
+  },
+  "units/flakpz_1a2_gepard.webp": {
+   "sha256": "fd09c479b7608c5f26a5e43fb05c026d0c424aafa85aeed583cf32f9300e5723",
+   "bytes": 9106
+  },
+  "units/flakpz_i_gepard.webp": {
+   "sha256": "ad1aff18e55ff34dc777c1070e999199a61847b98bb44773dd3a8db9485019d3",
+   "bytes": 1646
+  },
+  "units/flarakpz_1.webp": {
+   "sha256": "127becf32e9c8350d9f881e589b3eb5e87bbfc4a4ff1edee8ce8c9347abb7e27",
+   "bytes": 8314
+  },
+  "units/flarakrad.webp": {
+   "sha256": "2875c80cc69ccadc5492149032e166bf777c84e853660da30e28b7b0e44b67f5",
+   "bytes": 1748
+  },
+  "units/germ_flakpz_i_gepard.webp": {
+   "sha256": "ad1aff18e55ff34dc777c1070e999199a61847b98bb44773dd3a8db9485019d3",
+   "bytes": 1646
+  },
+  "units/germ_flarakrad.webp": {
+   "sha256": "2875c80cc69ccadc5492149032e166bf777c84e853660da30e28b7b0e44b67f5",
+   "bytes": 1748
+  },
+  "units/hq_11.webp": {
+   "sha256": "297d27f7c858dc767d97c58e8f652288373fe6a9930662c5766e60397aae454f",
+   "bytes": 10178
+  },
+  "units/m109a1.webp": {
+   "sha256": "8c71785dd5e649f6ef22f1ae804a0d1c6be33f64ddbcde5f2462b0b533a23839",
+   "bytes": 12726
+  },
+  "units/m163_vulcan.webp": {
+   "sha256": "15c80297558e1cd287fece519861da14d6e44324fec22ce4088ee8e6b2c42814",
+   "bytes": 9092
+  },
+  "units/m1a1_abrams.webp": {
+   "sha256": "3f9f0c88e4996dd4350f627af09fb80beed111e1bc51d1025f518c75a835db35",
+   "bytes": 11328
+  },
+  "units/m1a2_sep2.webp": {
+   "sha256": "abe2d7086aeec5ebd12349d6c8b6fdaebe98c2efcfe80a15713c3337939098df",
+   "bytes": 10480
+  },
+  "units/m3_bradley.webp": {
+   "sha256": "faa12aaec96de54c8f4630a134a8a2de3e936782398d90f42834c48a14eca527",
+   "bytes": 8806
+  },
+  "units/m3a3_bradley.webp": {
+   "sha256": "aaa520dc33d4bddb62886d463a45408a908e6c9416d63bc72f64f3baec6a6fd3",
+   "bytes": 9608
+  },
+  "units/m42_duster.webp": {
+   "sha256": "07cf2e6b1b4a9f3d66cd8854f83642178de1852328bd51fe2517b45cb5482ca3",
+   "bytes": 10006
+  },
+  "units/m48a1_patton_iii.webp": {
+   "sha256": "aeba7d34c5cd3544f86f1afe5ae3e58564b4c11698ffccd55dae091dd772a351",
+   "bytes": 10868
+  },
+  "units/m551.webp": {
+   "sha256": "441ccfe991fc93c1960187d4eaf6ac19a7d22f0e3f98cd5899fd01b4892cc60c",
+   "bytes": 9568
+  },
+  "units/mim_104_patriot_launcher_m901.webp": {
+   "sha256": "698da9c6de552c16422d2f7c8d6aa328fac0254d49fd445ce83d17e2846de7dc",
+   "bytes": 10530
+  },
+  "units/mim_104_patriot_radar_an_mpq53.webp": {
+   "sha256": "fc5d53072cd979bdc186cf7343867ac7b4e74236eaf1fb44fcc7af6cc81878da",
+   "bytes": 9212
+  },
+  "units/mim_23_hawk_launcher_m192.webp": {
+   "sha256": "3e3aa44b335e825b81b7610bd2cdadaa336a2535accb45223293a8ec79b1e8ab",
+   "bytes": 8060
+  },
+  "units/mim_23_hawk_radar_an_mpq46.webp": {
+   "sha256": "0f007d33bd3db8422d515f609004c581eea833e3e4ab24ec08ea66d42011724b",
+   "bytes": 6940
+  },
+  "units/mim_23_hawk_radar_cwar.webp": {
+   "sha256": "8639dc58afc79f5792c9ee22253b99196d048aa50683b7707054cd94c426ce26",
+   "bytes": 6402
+  },
+  "units/mpk_pr_1124.webp": {
+   "sha256": "3da5decbff99dd582dcbdb975ef1da111ccbb82e3472d07aa337ea6594c67470",
+   "bytes": 17848
+  },
+  "units/nebo_55j6.webp": {
+   "sha256": "0659fd3c6792d95a63886f5f3df45d1b38f03a2c8d823eb9cc9be3c876049ec9",
+   "bytes": 18160
+  },
+  "units/otomatic.webp": {
+   "sha256": "4a8d5d987ef24c33cefaf8207b1026de54a224060555badd7c6bb52cf0a5cf45",
+   "bytes": 9514
+  },
+  "units/pantsyr_s1.webp": {
+   "sha256": "b5ad81d137d8635f54fcdfe7589e0f97f376a983338e683a286a3701dce4e4a8",
+   "bytes": 10992
+  },
+  "units/pzh_2000_germ.webp": {
+   "sha256": "a61466271595fa0e0ba9a6949d96554a8a5a8c0cc9dbdd6d441297e3cb1c5b0a",
+   "bytes": 10452
+  },
+  "units/rszo_smerch.webp": {
+   "sha256": "b560f68a49e1e717d26e3e12e279dcc910b30086427dc4b8364be16f5b205178",
+   "bytes": 8270
+  },
+  "units/s300ps_5n64s.webp": {
+   "sha256": "a70c2df0de26d3261824188c54e803f00264045688a6a22988979ca26622de09",
+   "bytes": 12780
+  },
+  "units/s300ps_command_post_5n63s.webp": {
+   "sha256": "f7da7fee74f09f2392d5426d458dab9298cc50e43f3044c09a984cd96f0b49e8",
+   "bytes": 10382
+  },
+  "units/s300ps_launcher_5p85se.webp": {
+   "sha256": "edbf66a1fac4bc6f08cc7578b3984a07a54d27b97940a592443e6d2fc9b687fb",
+   "bytes": 8410
+  },
+  "units/s75m_launcher_sm90.webp": {
+   "sha256": "0cb2b37a1307dff6ee85918ab2aee7dc3eb3c6e715fa543f3f777fc2712572ba",
+   "bytes": 4366
+  },
+  "units/s75m_radar_p12ma.webp": {
+   "sha256": "5db033fe666852b8241efd68d2366df1a62669b32c5eb11e880a25d51fe1def3",
+   "bytes": 13928
+  },
+  "units/samp_t_fcs.webp": {
+   "sha256": "61385b04382473aa3abc54dac07a6116c55d2cc83c2f13764872ad8c35ea2f17",
+   "bytes": 8354
+  },
+  "units/samp_t_launcher.webp": {
+   "sha256": "e6a91b2a268d7cc5503443a25b6052f31c559cfafd99dde29597f16047a4f442",
+   "bytes": 9620
+  },
+  "units/slot_cn_hq_11.webp": {
+   "sha256": "a5a7c89246d3db2cbdfd4bbdac5e9b577634fcb25a523206867132abde094aed",
+   "bytes": 1974
+  },
+  "units/slot_germ_flakpz_1a2_gepard.webp": {
+   "sha256": "0f9c4c68dd0226ddc33f2a57416358196ee68401f923e5a0486518208dac26cd",
+   "bytes": 2290
+  },
+  "units/slot_germ_flakpz_i_gepard.webp": {
+   "sha256": "5016959dd98e4ad41396727217d9764069284d657438c549094cd33c718d6919",
+   "bytes": 2078
+  },
+  "units/slot_germ_flarakpz_1.webp": {
+   "sha256": "59f10c543a2150572714a61dbc713938f5641469e419b0224f654c7f6f079bc7",
+   "bytes": 2012
+  },
+  "units/slot_germ_flarakrad.webp": {
+   "sha256": "27ee2d2e0bd134433e9cca287d3533212541d65c5f823fd08567cb9b5eb1c042",
+   "bytes": 2132
+  },
+  "units/slot_germ_pzh_2000.webp": {
+   "sha256": "52b3358f8264142b8362b0494d50e641f8a1c4523ebe48641549cb2c418ff036",
+   "bytes": 1694
+  },
+  "units/slot_il_spyder_aio.webp": {
+   "sha256": "efb4bc7f3acc6613326ec7ef1d81d010e0dbafe7654bf770044e19ef9e610f65",
+   "bytes": 2022
+  },
+  "units/slot_it_otomatic.webp": {
+   "sha256": "15e008223aabe8ba3986577985f58ded1d73c77ea7864ff068820317425a80f0",
+   "bytes": 2120
+  },
+  "units/slot_it_samp_t_fcs.webp": {
+   "sha256": "d10a6c347f13e4e38695f5e4242a385a76f02d200c1f600ed780cc5b150334b7",
+   "bytes": 2000
+  },
+  "units/slot_it_samp_t_launcher.webp": {
+   "sha256": "5137f8014f4c73d2719ba3247706b3c9c66ac19e653fe48085be0e6c7675d82b",
+   "bytes": 2204
+  },
+  "units/slot_jp_type_03_chusam_fcs.webp": {
+   "sha256": "4b7ebcffd8c312efc253a36e70f366e474df385fdcf084dfba9809a03a74f96c",
+   "bytes": 2066
+  },
+  "units/slot_jp_type_03_chusam_launcher.webp": {
+   "sha256": "75816dee6a2a5d973a4e0a117e790c95669eec3bfb5b7ffe8f380c38b77e8003",
+   "bytes": 2088
+  },
+  "units/slot_sw_crotale_ng.webp": {
+   "sha256": "683556b0c69b9a7bf99bbc5194410a384ad597283c31e7e85372a19e1f9d2a19",
+   "bytes": 2380
+  },
+  "units/slot_us_ashville_class_douglas.webp": {
+   "sha256": "05217e6a2b912f44d316443a55a6b1934449cd4e5d61abe0b4cf810209cc5852",
+   "bytes": 2474
+  },
+  "units/slot_us_destroyer_cf_adams_class_cf_adams.webp": {
+   "sha256": "7e65c63f2f8410e8fa27e6047b3932fbc921714d7e66529af9a0e8179084b14a",
+   "bytes": 2582
+  },
+  "units/slot_us_m109a1.webp": {
+   "sha256": "819fd381b1f3430b316de40fcc9a86179aaeac2a61e22c36016a3f0875c5743b",
+   "bytes": 1738
+  },
+  "units/slot_us_m163_vulcan.webp": {
+   "sha256": "2a5b04f90877b87831628ee8c8f6b24b8e21dba8d62f8a10d4aaaf870be23135",
+   "bytes": 2008
+  },
+  "units/slot_us_m1a1_abrams.webp": {
+   "sha256": "edcb44140c5cf0095352752c2b552cf541c8654e39fd0b654af6926688ebac01",
+   "bytes": 2002
+  },
+  "units/slot_us_m1a2_sep2_abrams.webp": {
+   "sha256": "a35e9a8826c2cf3cda6b2ad51d977f71305595efad054af80350409d51fd6fd3",
+   "bytes": 2230
+  },
+  "units/slot_us_m3_bradley.webp": {
+   "sha256": "f92e4deb429f1b067e7b38fd6fa448c443dfcc929bc9371050a42b5e036cdfbe",
+   "bytes": 2204
+  },
+  "units/slot_us_m3a3_bradley.webp": {
+   "sha256": "d6fd8e5d22f6ff90a9cbccdff58cf43f4226e0dc9c96333b20c11fbf97e9d297",
+   "bytes": 2468
+  },
+  "units/slot_us_m42_duster.webp": {
+   "sha256": "26ccb5cbf58f475545e6d0eb2869adb0daa967a55bb0aa508f2503712222ed19",
+   "bytes": 2096
+  },
+  "units/slot_us_m48a1_patton_iii.webp": {
+   "sha256": "ebe9886422b718a4b8d902d870550d0c3b51bf9c748162ab13251974164eb998",
+   "bytes": 2274
+  },
+  "units/slot_us_m551.webp": {
+   "sha256": "a425461855adbe2d863a422ae12935293d1a338efab82b66f2eb9669d4c6f88e",
+   "bytes": 2138
+  },
+  "units/slot_ussr_2s19_m1.webp": {
+   "sha256": "cf4a820f302c643639698809d024563c5355e3e5cd10829b7ef8b3d87a1eb18f",
+   "bytes": 1902
+  },
+  "units/slot_ussr_2s38.webp": {
+   "sha256": "f717334d06975d062dd66fcd68d1cdb05f8636ca8b9ab13b1312d58823eed582",
+   "bytes": 2096
+  },
+  "units/slot_ussr_2s3m.webp": {
+   "sha256": "2fedc461439a804e227606caeae4d2466d9686b5f0e5747ad361a181f2e198b9",
+   "bytes": 2202
+  },
+  "units/slot_ussr_9a33bm3.webp": {
+   "sha256": "16de4d847d3a463312563ef6427e3313a94b1e549ac666c5bd4a4426c1d2cb72",
+   "bytes": 2338
+  },
+  "units/slot_ussr_9a35_m2.webp": {
+   "sha256": "0fb47b5b2e2e356822371d7492ec9435221d4a0714d9fc3a827556aab04b09df",
+   "bytes": 2196
+  },
+  "units/slot_ussr_bmp_1.webp": {
+   "sha256": "cf2ac2eb1076aefcfd92c67aa9bacc39b651e76092ae314b4f538f25cca1b533",
+   "bytes": 2118
+  },
+  "units/slot_ussr_bmp_2.webp": {
+   "sha256": "41541ae053cdaba16c94a0a481787e7b6d30d02c6c1892697c05aecce78dfadc",
+   "bytes": 2086
+  },
+  "units/slot_ussr_bmp_3.webp": {
+   "sha256": "7b55262c754df5adbd4c6a55209f787c5f8dabd6f337cf5269ac33dce4cfb663",
+   "bytes": 2296
+  },
+  "units/slot_ussr_buk_m3_fcs.webp": {
+   "sha256": "6bc20b5836f3a27bc70cd9157922b2a619adf99e29f5badce6ca9c64830addfc",
+   "bytes": 2148
+  },
+  "units/slot_ussr_buk_m3_launcher.webp": {
+   "sha256": "392942a097b3540b31b49c7124a40974c52ee7fd13414a0578679e05e8cedb3f",
+   "bytes": 2002
+  },
+  "units/slot_ussr_destroyer_pr56_bravy.webp": {
+   "sha256": "1f48c8bc29afae3feabfd1c28e938f1b894bf8fe827b55eb4b9cdc951e835ead",
+   "bytes": 2618
+  },
+  "units/slot_ussr_mpk_pr_1124.webp": {
+   "sha256": "859f1f3ed23e6409bf3b310d3554f02ddb9e0820f1e674f45d6b404016f1772a",
+   "bytes": 2590
+  },
+  "units/slot_ussr_pantsyr_s1.webp": {
+   "sha256": "67c7ec3d06b9e4d910db4a29e90c08428ecef0fa9bbf34ba7232bda785614abb",
+   "bytes": 2200
+  },
+  "units/slot_ussr_t_54_1951.webp": {
+   "sha256": "a523126a72d2a7cf5b57463be1881dc068968cf32d36ff507162670ba15afacc",
+   "bytes": 2250
+  },
+  "units/slot_ussr_t_80bvm.webp": {
+   "sha256": "05c332182d3eb9253788133feacce6f12dda71d3cc4f0da279f318824ebbfd15",
+   "bytes": 2342
+  },
+  "units/slot_ussr_t_80u.webp": {
+   "sha256": "e08447659eb649de1197b201558eafc49e159fe328c660df0746e5f7407761ca",
+   "bytes": 2172
+  },
+  "units/slot_ussr_zprk_2s6.webp": {
+   "sha256": "c08bdb6239502edd1938da879960523a9d322ca0a156c9779aef6f2302cab28c",
+   "bytes": 2110
+  },
+  "units/slot_ussr_zsu_23_4.webp": {
+   "sha256": "a6343e1b681ca8a19d970d40e5ac316f270a5e6fd479f19e47d9870160b3b8f9",
+   "bytes": 2086
+  },
+  "units/slot_ussr_zsu_23_4m4.webp": {
+   "sha256": "e53a8954343b5b53ddb8d80c4f24542cad5ddcf8366ebb80fd3eee9566615b89",
+   "bytes": 2642
+  },
+  "units/slot_ussr_zsu_57_2.webp": {
+   "sha256": "17078803c3c305ebb8484e513ce07f9d94cc019272e27fc442204bb53994ca2a",
+   "bytes": 2238
+  },
+  "units/snr_75.webp": {
+   "sha256": "ea18928d277e3b5a465f3d2c03c4029603b4677d7ad28048efae1099713eb310",
+   "bytes": 11932
+  },
+  "units/spyder_aio.webp": {
+   "sha256": "48dcb14eae1683320b70340e427d456bf51020f920ef3ec655ab99da4db33bd1",
+   "bytes": 9688
+  },
+  "units/t_54_1951.webp": {
+   "sha256": "b6fa02fe9db319f0c78dbf100873665015fba060c09ed342a7a89bbc6575b8ba",
+   "bytes": 10932
+  },
+  "units/t_80bvm.webp": {
+   "sha256": "bfe78eb0992782349880193e17fdd8308decf7d5519e63d56311982a2069fbb9",
+   "bytes": 12140
+  },
+  "units/t_80u.webp": {
+   "sha256": "6e578813d573330a5c267d3e67b7e3893a621426da733d0584999a833c8e877f",
+   "bytes": 11154
+  },
+  "units/tps_59_radar.webp": {
+   "sha256": "78f08299624d9e60c683cb1a378c0a421113a7ab01ec020d51057c1a6893bf11",
+   "bytes": 13096
+  },
+  "units/type_03_chusam_fcs.webp": {
+   "sha256": "629980c315917108ca7626eaa857b3d1162b14fcff098b9ed8535357f3c1f7c8",
+   "bytes": 11348
+  },
+  "units/type_03_chusam_launcher.webp": {
+   "sha256": "4e92c92314a86ed066f054d572c4c7fa40616ceaf12cc505dd7dccc6a5255189",
+   "bytes": 11200
+  },
+  "units/us_m_270_mlrs.webp": {
+   "sha256": "cc6815282ff94a0df66be083c1c6d805bc53b89cd8a6c2c93b916b844dbc7a2d",
+   "bytes": 9192
+  },
+  "units/us_m_752_launcher.webp": {
+   "sha256": "607542b53dc206d1b1165e411ff72a3fbbf5183aa4637165843d649443049daf",
+   "bytes": 7216
+  },
+  "units/ussr_buk_m1.webp": {
+   "sha256": "d48c29500f4db1592b62d30c97e2d1443f25fe2fd97bd315a047d1e6c62793ad",
+   "bytes": 8148
+  },
+  "units/zsu_23_4.webp": {
+   "sha256": "33abe576ece69b4bda3436773f894d835fd71b219d58db9b2f4e50afe9219f5c",
+   "bytes": 8594
+  },
+  "units/zsu_23_4m4.webp": {
+   "sha256": "28ca7940e9ded4539d1a9b878b64926e0dda362ec19224a53eb35a8c2daed742",
+   "bytes": 9698
+  },
+  "units/zsu_57_2.webp": {
+   "sha256": "84eccd4ef42ee52744d4643abf1a49cf099929770cc853f9ed2bcee2c3cebb1f",
+   "bytes": 12272
+  }
+ },
+ "sources": [
+  {
+   "path": "aces.vromfs.bin_u/gamedata/objectgroups/dyn_foundation_7m.blkx",
+   "sha": "ae7840eb35edff34db9e0a9536a5644b625f690f"
+  },
+  {
+   "path": "aces.vromfs.bin_u/gamedata/objectgroups/dyn_sam_site_wide_arragement.blkx",
+   "sha": "1be81ede8b50c693d80267b7abf3b033b521dbbd"
+  },
+  {
+   "path": "aces.vromfs.bin_u/gamedata/objectgroups/dynaf_archipelago_a.blkx",
+   "sha": "4100502425031bb76dade788f33f815a1ccd1b7f"
+  },
+  {
+   "path": "aces.vromfs.bin_u/gamedata/objectgroups/dynaf_archipelago_b.blkx",
+   "sha": "82a075e4710976d39e027e555ad37a36420598c1"
+  },
+  {
+   "path": "aces.vromfs.bin_u/gamedata/objectgroups/dynaf_pg_1line_2000_universal.blkx",
+   "sha": "9a74e996eb64e2b62e88a2e5d2b40556a7d3c653"
+  },
+  {
+   "path": "aces.vromfs.bin_u/gamedata/objectgroups/nt_ammo_factory_foundation.blkx",
+   "sha": "89842bd153cf98fb0421b8190bebaca7c9dbdb85"
+  },
+  {
+   "path": "aces.vromfs.bin_u/gamedata/objectgroups/nt_assembly_area_foundation.blkx",
+   "sha": "176d13004da6873912c5a12326f318f5f99e4c92"
+  },
+  {
+   "path": "aces.vromfs.bin_u/gamedata/objectgroups/nt_assembly_area_nomesh.blkx",
+   "sha": "b6deeaf7bb03cbb72777178824689b439fc2d5f1"
+  },
+  {
+   "path": "aces.vromfs.bin_u/gamedata/objectgroups/nt_fuel_factory_foundation.blkx",
+   "sha": "5590add58b90f2253f595fa4ee541cfa31d62893"
+  },
+  {
+   "path": "aces.vromfs.bin_u/gamedata/objectgroups/nt_stronghold.blkx",
+   "sha": "c1778ab4feb556772302d33487d6e0a3749eea27"
+  },
+  {
+   "path": "aces.vromfs.bin_u/levels/air_archipelago.blkx",
+   "sha": "0e1b7b9ff959a7cabdae1cdd073602b501d2ab29"
+  },
+  {
+   "path": "aces.vromfs.bin_u/levels/air_kamchatka.blkx",
+   "sha": "36e22c6d240b0d102535d5d02068ab1e26f37669"
+  },
+  {
+   "path": "aces.vromfs.bin_u/levels/air_south_eastern_city.blkx",
+   "sha": "6cc5726fd2d8192b3112dac68f62e3cda3fa8dcb"
+  },
+  {
+   "path": "aces.vromfs.bin_u/templates/nuclear_escalation/airfields.blkx",
+   "sha": "f918cbd9a857ca76280888ba42445ded28f9520c"
+  },
+  {
+   "path": "aces.vromfs.bin_u/templates/nuclear_escalation/awacs.blkx",
+   "sha": "98c7f6b3e85cfd70c27027062b937a80dc390dea"
+  },
+  {
+   "path": "aces.vromfs.bin_u/templates/nuclear_escalation/common.blkx",
+   "sha": "d8ea5a029d9af77f57226d006ec86782e953b702"
+  },
+  {
+   "path": "aces.vromfs.bin_u/templates/nuclear_escalation/factory_air_defence_presets.blkx",
+   "sha": "9337a776857b65c4023fa5fa79f9a339a0321fdf"
+  },
+  {
+   "path": "aces.vromfs.bin_u/templates/nuclear_escalation/factory_equip.blkx",
+   "sha": "053b230e12d8860a37f1701c71d3a70f303128ff"
+  },
+  {
+   "path": "aces.vromfs.bin_u/templates/nuclear_escalation/factory_tank.blkx",
+   "sha": "cdfa9460f2163d071e083a26756fc775cbb30994"
+  },
+  {
+   "path": "aces.vromfs.bin_u/templates/nuclear_escalation/sam_sites.blkx",
+   "sha": "abd40ecb3491a52d88fdbb07c08c876ec3d54b01"
+  },
+  {
+   "path": "aces.vromfs.bin_u/templates/nuclear_escalation/single_units.blkx",
+   "sha": "6b64f6cb12fc272b58bd16bd4f1eb3b2235118f5"
+  },
+  {
+   "path": "aces.vromfs.bin_u/templates/nuclear_escalation/strongpoints.blkx",
+   "sha": "628e0a65102d637e60011290f43e08132b6d3000"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_archipelago_mirror_nuclear_escalation_tdm.blkx",
+   "sha": "0baaf6d38184bd5b0e366fa547ffb30a0cd45b47"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_archipelago_nuclear_escalation_tdm.blkx",
+   "sha": "e5d75709cb3a7c5058c2110b263ccc2b4c9de307"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_kamchatka_mirror_nuclear_escalation_tdm.blkx",
+   "sha": "106fbf369d4efe55fe3de33c4b99c2980b837ef8"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_kamchatka_nuclear_escalation_tdm.blkx",
+   "sha": "4e32abb3fd66891d76f15d12ed1dae59b4370262"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_south_eastern_city_mirror_nuclear_escalation_tdm.blkx",
+   "sha": "3a525a13f5f61941bc38888652b65dfae3da8523"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/nuclear_escalation/air_south_eastern_city_nuclear_escalation_tdm.blkx",
+   "sha": "9e5ef81ff8605c289115baef8c8239af8c48158a"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/templates/air_templates/nuclear_escalation_template.blkx",
+   "sha": "e92e9d399247c76d5ceb50de2ae46a0c174839c6"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/templates/player_unit_template.blkx",
+   "sha": "09c60fe3182150172288e60ff8c2fd8372c2c28f"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/templates/units_sets/nuclear_escalation_ground_sets/nuclear_escalation_mlrs.blkx",
+   "sha": "d3dc8a098155de2fb303b190ca12168664abd451"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/templates/units_sets/nuclear_escalation_ground_sets/nuclear_escalation_tbm.blkx",
+   "sha": "f9742987af99ec20145629c003a80a19da72f846"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/templates/units_sets/nuclear_escalation_ground_sets/nuclear_escalation_tbm_1970.blkx",
+   "sha": "1ccd99385b1ebdedee8d44408ee7c9cd2f171bed"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/templates/units_sets/nuclear_escalation_ground_sets/nuclear_escalation_tbm_2000.blkx",
+   "sha": "db600cfb44c1f4e3970cb1aef419a9c8a52437f0"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/templates/units_sets/nuclear_escalation_ship_sets/nuclear_escalation_ships.blkx",
+   "sha": "86ffe7b6dfbb1e28c588eb6c6815754b1a23093c"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/templates/units_sets/nuclear_escalation_ship_sets/nuclear_escalation_ships_1970.blkx",
+   "sha": "e40ec1cdb8733068c6ac1ab90d3c29c6f5d82695"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/templates/units_sets/nuclear_escalation_ship_sets/nuclear_escalation_ships_1980.blkx",
+   "sha": "567ad08176634128ccb68edb343a51c86410fe93"
+  },
+  {
+   "path": "mis.vromfs.bin_u/gamedata/missions/templates/units_sets/nuclear_escalation_ship_sets/nuclear_escalation_ships_2000.blkx",
+   "sha": "40ca7c509c04fc39eb6bd3a82b7b6b7cebcd70e6"
+  }
+ ],
+ "generated": "2026-11-28T13:35:37Z"
+}
